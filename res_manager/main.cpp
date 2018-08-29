@@ -16,9 +16,6 @@ void printRes(ResourceHandle hnd) {
 
 
 int main() {
-	//std::cout << is_defined<ResFoo> << '\n';
-	//std::cout << is_defined<ResBar> << '\n';
-
 	printRes(gResFoo);
 	printRes(gResBar);
 

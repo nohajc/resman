@@ -47,7 +47,42 @@ public:
 	MangleStorageNamesASTVisitor(uint64_t resID, const std::string& resPath, MangledStorageGlobals& glob)
 		: resourceID(resID), resourcePath(resPath), mangledGlob(glob) {}
 
-	bool VisitVarTemplateSpecializationDecl(VarTemplateSpecializationDecl* decl) {
+	bool VisitVarDecl(VarDecl* decl) {
+		if (!decl->isStaticDataMember()
+			|| !decl->getMemberSpecializationInfo()
+			|| !decl->isDefinedOutsideFunctionOrMethod()
+			|| !decl->isThisDeclarationADefinition()
+			|| !StringRef(decl->getQualifiedNameAsString()).startswith("resman::Resource")) {
+			return true;
+		}
+
+		std::string mangledVarName;
+		auto mangleCtxt = decl->getASTContext().createMangleContext();
+
+		if (!mangleCtxt->shouldMangleDeclName(decl)) {
+			return true;
+		}
+
+		llvm::outs() << decl->getName() << '\n';
+
+		{
+			llvm::raw_string_ostream strout(mangledVarName);
+			mangleCtxt->mangleName(decl, strout);
+			strout.str();
+		}
+
+		if (mangledVarName.find("begin") != std::string::npos) {
+			mangledGlob.storageBegin = mangledVarName;
+		}
+		else if (mangledVarName.find("size") != std::string::npos) {
+			mangledGlob.storageSize = mangledVarName;
+		}
+
+		delete mangleCtxt;
+		return true;
+	}
+
+	/*bool VisitVarTemplateSpecializationDecl(VarTemplateSpecializationDecl* decl) {
 		std::string mangledVarName;
 
 		auto mangleCtxt = decl->getASTContext().createMangleContext(); // TODO: fix memory leak
@@ -70,7 +105,7 @@ public:
 		}
 
 		return true;
-	}
+	}*/
 };
 
 static llvm::LLVMContext llvmCtxt;
@@ -84,10 +119,16 @@ class CompileResourcesASTVisitor : public RecursiveASTVisitor<CompileResourcesAS
 		llvm::raw_string_ostream codestream(code);
 		codestream << "#include <cstddef>\n#include <cstdint>\n";
 		codestream << "namespace resman {\n";
-		codestream << "template <size_t N> extern const char resource_storage_begin[];\n";
-		codestream << "template <size_t N> extern const size_t resource_storage_size;\n";
-		codestream << "template <> const char resource_storage_begin<" << resourceID << ">[] = \"dummy\";\n";
-		codestream << "template <> const uint32_t resource_storage_size<" << resourceID << ">{6};\n";
+		codestream << R"__(
+template <size_t N>
+struct Resource {
+private:
+	static const char storage_begin[];
+	static const uint32_t storage_size;
+};
+		)__";
+		codestream << "template <> const char Resource<" << resourceID << ">::storage_begin[] = \"dummy\";\n";
+		codestream << "template <> const uint32_t Resource<" << resourceID << ">::storage_size{6};\n";
 		codestream << "}";
 
 		auto ast = buildASTFromCode(codestream.str());
