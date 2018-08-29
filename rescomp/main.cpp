@@ -81,31 +81,6 @@ public:
 		delete mangleCtxt;
 		return true;
 	}
-
-	/*bool VisitVarTemplateSpecializationDecl(VarTemplateSpecializationDecl* decl) {
-		std::string mangledVarName;
-
-		auto mangleCtxt = decl->getASTContext().createMangleContext(); // TODO: fix memory leak
-
-		if (!mangleCtxt->shouldMangleDeclName(decl)) {
-			return true;
-		}
-
-		{
-			llvm::raw_string_ostream strout(mangledVarName);
-			mangleCtxt->mangleName(decl, strout);
-			strout.str();
-		}
-
-		if (mangledVarName.find("begin") != std::string::npos) {
-			mangledGlob.storageBegin = mangledVarName;
-		}
-		else if (mangledVarName.find("size") != std::string::npos) {
-			mangledGlob.storageSize = mangledVarName;
-		}
-
-		return true;
-	}*/
 };
 
 static llvm::LLVMContext llvmCtxt;
@@ -198,11 +173,13 @@ public:
 			return true;
 		}
 
+		// Retrieve resource ID
 		const auto& tmplArg = specType->getArg(0);
 		uint64_t resourceID; bool isValid;
 		std::tie(resourceID, isValid) = getTmplArgVal(tmplArg);
 		if (!isValid) return true;
 
+		// Retrieve resource path
 		auto initializer = decl->getInit();
 		if (!isa<CXXConstructExpr>(initializer)) {
 			return true;
@@ -219,34 +196,6 @@ public:
 
 		llvm::outs() << "Resource: ID = " << resourceID << ", PATH = \"" << resourcePath << "\"\n";
 		constructStorageGlobals(resourceID, resourcePath);
-
-		/*if (!decl->isStaticDataMember()
-			|| decl->getName() != "path"
-			|| !decl->getMemberSpecializationInfo()
-			|| !decl->isThisDeclarationADefinition()
-			|| !StringRef(decl->getQualifiedNameAsString()).startswith("resman::Resource")) {
-			return true;
-		}
-
-		auto qualifier = decl->getQualifier();
-		auto classType = qualifier->getAsType()->getAs<TemplateSpecializationType>();
-		if (!classType || !isa<TemplateSpecializationType>(classType)) return true;
-
-		// Retrieve resource ID
-		const auto& tmplArg = classType->getArg(0);
-		uint64_t resourceID; bool isValid;
-		std::tie(resourceID, isValid) = getTmplArgVal(tmplArg);
-		if (!isValid) return true;
-
-		// Retrieve resource path
-		auto expr = decl->getInit();
-		if (!isa<StringLiteral>(expr)) return true;
-
-		auto pathValue = dyn_cast<StringLiteral>(expr);
-		std::string resourcePath = pathValue->getString();
-
-		llvm::outs() << "Resource: ID = " << resourceID << ", PATH = \"" << resourcePath << "\"\n";
-		constructStorageGlobals(resourceID, resourcePath);*/
 
 		return true;
 	}

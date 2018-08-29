@@ -20,13 +20,6 @@ namespace resman {
 		static const uint32_t storage_size;
 	};
 
-	//template <size_t N>
-	//extern const char resource_storage_begin[];
-
-	//template <size_t N>
-	//extern const uint32_t resource_storage_size;
-
-
 	class ResourceHandle {
 		const size_t res_id = 0;
 		const uint32_t res_byte_size = 0;
