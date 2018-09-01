@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cstddef>
+#include <cstdint>
 #include <type_traits>
 #include <stdexcept>
 #include <utility>
@@ -9,7 +9,7 @@ namespace resman {
 	// fwd
 	class ResourceHandle;
 
-	template <size_t N>
+	template <uint32_t N>
 	struct Resource {
 		constexpr Resource(const char* path) {}
 
@@ -21,13 +21,13 @@ namespace resman {
 	};
 
 	class ResourceHandle {
-		const size_t res_id = 0;
+		const uint32_t res_id = 0;
 		const uint32_t res_byte_size = 0;
 		const char* res_begin_ptr = nullptr;
 		const char* res_end_ptr = nullptr;
 
 	public:
-		template <size_t N>
+		template <uint32_t N>
 		ResourceHandle(Resource<N>)
 			: res_id(N)
 			, res_byte_size(Resource<N>::storage_size)
@@ -41,10 +41,10 @@ namespace resman {
 		const char* end() {
 			return res_end_ptr;
 		}
-		size_t size() {
+		uint32_t size() {
 			return res_byte_size;
 		}
-		size_t id() {
+		uint32_t id() {
 			return res_id;
 		}
 	};

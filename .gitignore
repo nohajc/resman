@@ -333,3 +333,5 @@ ASALocalRun/
 
 linux_build
 *.lib
+*.a
+*.o

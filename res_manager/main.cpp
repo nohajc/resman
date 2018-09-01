@@ -19,6 +19,8 @@ int main() {
 	printRes(gResFoo);
 	printRes(gResBar);
 
+#ifdef _WIN32
 	system("pause");
+#endif
 	return 0;
 }

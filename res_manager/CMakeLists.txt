@@ -4,6 +4,6 @@ project(resman_api)
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -s")
 
 set(SOURCE_FILES
-	main.cpp test.h)
+	main.cpp test.h test.o)
 
 add_executable(resman_api_test ${SOURCE_FILES})
