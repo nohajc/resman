@@ -234,7 +234,7 @@ public:
 		llvm::verifyModule(mod);
 
 		try {	
-			generateObjectFile(mod, objPath, "x86-64");
+			generateObjectFile(mod, objPath, "x86-64"); // TODO: support 32-bit
 			packIntoLib(objPath, libPath);
 		}
 		catch (const std::exception& ex) {
