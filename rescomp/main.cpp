@@ -14,6 +14,7 @@
 
 #include <iostream>
 #include <utility>
+#include <string>
 
 #include "../common/fileio.h"
 #include "../common/objcompiler.h"
@@ -33,6 +34,12 @@ constexpr const char libext[] = ".a";
 #endif
 
 static llvm::cl::OptionCategory ToolingResCompCategory("Resource Compiler");
+
+static llvm::cl::opt<std::string> OutputDirectory("o",
+	llvm::cl::Required,
+	llvm::cl::desc("Specify output directory"),
+	llvm::cl::value_desc("directory"),
+	llvm::cl::cat(ToolingResCompCategory));
 
 struct MangledStorageGlobals {
 	std::string storageBegin;
