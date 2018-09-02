@@ -41,6 +41,11 @@ static llvm::cl::opt<std::string> OutputDirectory("o",
 	llvm::cl::value_desc("directory"),
 	llvm::cl::cat(ToolingResCompCategory));
 
+static llvm::cl::opt<std::string> MArch("march",
+	llvm::cl::Required,
+	llvm::cl::desc("Architecture to generate code for"),
+	llvm::cl::cat(ToolingResCompCategory));
+
 struct MangledStorageGlobals {
 	std::string storageBegin;
 	std::string storageSize;
@@ -241,7 +246,7 @@ public:
 		llvm::verifyModule(mod);
 
 		try {	
-			generateObjectFile(mod, objPath, "x86-64"); // TODO: support 32-bit
+			generateObjectFile(mod, objPath, MArch);
 			packIntoLib(objPath, libPath);
 		}
 		catch (const std::exception& ex) {

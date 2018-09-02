@@ -10,9 +10,10 @@
 #include <llvm/Support/ToolOutputFile.h>
 #include <llvm/Support/FileSystem.h>
 #include <llvm/ADT/Triple.h>
-#include <llvm/CodeGen/CommandFlags.def>
 #include <llvm/Analysis/TargetLibraryInfo.h>
 #include <llvm/CodeGen/MachineModuleInfo.h>
+#include <llvm/Target/TargetMachine.h>
+#include <llvm/Support/Host.h>
 
 using namespace llvm;
 
@@ -75,9 +76,19 @@ struct LLCDiagnosticHandler : public DiagnosticHandler {
 	}
 };
 
+static std::string getFeaturesStr() {
+	SubtargetFeatures Features;
+
+	StringMap<bool> HostFeatures;
+	if (sys::getHostCPUFeatures(HostFeatures))
+		for (auto &F : HostFeatures)
+			Features.AddFeature(F.first(), F.second);
+
+	return Features.getString();
+}
 
 void generateObjectFile(Module& mod, const std::string& ofname, const std::string& arch) {
-	FileType = TargetMachine::CGFT_ObjectFile;
+	auto fileType = TargetMachine::CGFT_ObjectFile;
 
 	LLVMInitializeX86TargetInfo();
 	LLVMInitializeX86Target();
@@ -122,21 +133,11 @@ void generateObjectFile(Module& mod, const std::string& ofname, const std::strin
 		throw std::runtime_error(error);
 	}
 
-	std::string CPUStr = getCPUStr(), FeaturesStr = getFeaturesStr();
-	CodeGenOpt::Level OLvl = CodeGenOpt::Default;
+	std::string CPUStr = sys::getHostCPUName(), FeaturesStr = getFeaturesStr();
 
-	TargetOptions options = InitTargetOptionsFromCodeGenFlags();
-	options.DisableIntegratedAS = false;
-	options.MCOptions.ShowMCEncoding = false;
-	options.MCOptions.MCUseDwarfDirectory = false;
-	options.MCOptions.AsmVerbose = false;
-	options.MCOptions.PreserveAsmComments = false;
-	//options.MCOptions.IASSearchPaths = IncludeDirs;
-	//options.MCOptions.SplitDwarfFile = SplitDwarfFile;
-
+	TargetOptions options;
 	std::unique_ptr<TargetMachine> target(theTarget->createTargetMachine(
-		theTriple.getTriple(), CPUStr, FeaturesStr, options, getRelocModel(),
-		getCodeModel(), OLvl));
+		theTriple.getTriple(), CPUStr, FeaturesStr, options, llvm::None));
 
 	std::error_code errc;
 	ToolOutputFile out(ofname, errc, sys::fs::F_None);
@@ -150,7 +151,6 @@ void generateObjectFile(Module& mod, const std::string& ofname, const std::strin
 
 	PM.add(new TargetLibraryInfoWrapperPass(TLII));
 	mod.setDataLayout(target->createDataLayout());
-	setFunctionAttributes(CPUStr, FeaturesStr, mod);
 
 	{
 		raw_pwrite_stream *OS = &out.os();
@@ -165,7 +165,7 @@ void generateObjectFile(Module& mod, const std::string& ofname, const std::strin
 		LLVMTargetMachine &LLVMTM = static_cast<LLVMTargetMachine&>(*target);
 		MachineModuleInfo *MMI = new MachineModuleInfo(&LLVMTM);
 
-		if (target->addPassesToEmitFile(PM, *OS, FileType, false, MMI)) {
+		if (target->addPassesToEmitFile(PM, *OS, fileType, false, MMI)) {
 			throw std::runtime_error("Incompatible target and file type.");
 		}
 
