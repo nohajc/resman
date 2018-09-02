@@ -36,7 +36,6 @@ constexpr const char libext[] = ".a";
 static llvm::cl::OptionCategory ToolingResCompCategory("Resource Compiler");
 
 static llvm::cl::opt<std::string> OutputDirectory("o",
-	llvm::cl::Required,
 	llvm::cl::desc("Specify output directory"),
 	llvm::cl::value_desc("directory"),
 	llvm::cl::cat(ToolingResCompCategory));
@@ -214,6 +213,12 @@ public:
 
 static std::pair<std::string, std::string> getOutputPaths(const std::string& inputPath) {
 	SmallString<512> fnameBuf(inputPath);
+
+	if (!OutputDirectory.empty()) {
+		auto fname = llvm::sys::path::filename(inputPath);
+		fnameBuf = SmallString<512>(OutputDirectory);
+		llvm::sys::path::append(fnameBuf, fname);
+	}
 
 	llvm::sys::path::replace_extension(fnameBuf, objext);
 	std::string objPath = fnameBuf.str();
