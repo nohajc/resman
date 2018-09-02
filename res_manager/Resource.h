@@ -11,7 +11,8 @@ namespace resman {
 
 	template <uint32_t N>
 	struct Resource {
-		constexpr Resource(const char* path) {}
+		template <size_t S>
+		constexpr Resource(const char (&path)[S]) {}
 
 	private:
 		friend ResourceHandle;

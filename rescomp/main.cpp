@@ -46,6 +46,8 @@ static llvm::cl::opt<std::string> MArch("march",
 	llvm::cl::desc("Architecture to generate code for"),
 	llvm::cl::cat(ToolingResCompCategory));
 
+// TODO: add resource search path option
+
 struct MangledStorageGlobals {
 	std::string storageBegin;
 	std::string storageSize;
@@ -199,11 +201,8 @@ public:
 		auto constructor = dyn_cast<CXXConstructExpr>(initializer);
 		auto arg = *constructor->arg_begin();
 
-		if (!isa<ImplicitCastExpr>(arg)) return true;
-		auto strExpr = dyn_cast<ImplicitCastExpr>(arg)->getSubExpr();
-
-		if (!isa<StringLiteral>(strExpr)) return true;
-		auto pathValue = dyn_cast<StringLiteral>(strExpr);
+		if (!isa<StringLiteral>(arg)) return true;
+		auto pathValue = dyn_cast<StringLiteral>(arg);
 		std::string resourcePath = pathValue->getString();
 
 		llvm::outs() << "Resource: ID = " << resourceID << ", PATH = \"" << resourcePath << "\"\n";
