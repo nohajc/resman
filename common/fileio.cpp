@@ -1,18 +1,49 @@
 #include "fileio.h"
 #include <fstream>
+#include <utility>
+#include <llvm/Support/FileSystem.h>
+#include <llvm/ADT/ScopeExit.h>
 
-std::vector<char> readFileIntoMemory(const std::string& ifname) {
+using namespace llvm;
+
+static bool readFileInto(const std::string& ifname, std::vector<char>& contents) {
 	std::ifstream in(ifname, std::ios::binary);
 	if (!in.is_open()) {
-		throw std::runtime_error("Cannot open input file.");
+		return false;
 	}
 
 	in.seekg(0, std::ios::end);
 	size_t fsize = in.tellg();
 
-	std::vector<char> contents(fsize);
+	contents.resize(fsize);
 	in.seekg(0, std::ios::beg);
 	in.read(contents.data(), fsize);
 
-	return contents;
+	return true;
+}
+
+std::vector<char> readFileIntoMemory(const std::string& ifname, const std::vector<StringRef>& searchPath) {
+	std::vector<char> contents;
+
+	if (readFileInto(ifname, contents)) { // is the file in the current directory?
+		return contents;
+	}
+
+	SmallString<512> cwdir;
+	sys::fs::current_path(cwdir);
+
+	auto resetCwdir = make_scope_exit([&] {
+		sys::fs::set_current_path(cwdir.str());
+	});
+
+	for (StringRef dir : searchPath) { // if not, try search path
+		//llvm::outs() << "Searching input in " << dir << "\n";
+		sys::fs::set_current_path(dir);
+
+		if (!readFileInto(ifname, contents)) {
+			continue;
+		}
+		return contents;
+	}
+	throw std::runtime_error("Cannot find input file " + ifname + '.');
 }

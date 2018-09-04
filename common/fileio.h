@@ -2,5 +2,6 @@
 
 #include <vector>
 #include <string>
+#include <llvm/ADT/StringRef.h>
 
-std::vector<char> readFileIntoMemory(const std::string& ifname);
+std::vector<char> readFileIntoMemory(const std::string& ifname, const std::vector<llvm::StringRef>& searchPath = {});

@@ -101,6 +101,7 @@ static llvm::LLVMContext llvmCtxt;
 class CompileResourcesASTVisitor : public RecursiveASTVisitor<CompileResourcesASTVisitor> {
 	ASTContext& astCtxt;
 	std::unique_ptr<llvm::Module> mod;
+	const std::vector<StringRef>& searchPath;
 
 	void constructStorageGlobals(uint64_t resourceID, const std::string& resourcePath) {
 		std::string code;
@@ -127,7 +128,7 @@ private:
 
 			llvm::outs() << "begin: " << glob.storageBegin << ", size: " << glob.storageSize << '\n';
 			try {
-				auto data = readFileIntoMemory(resourcePath);
+				auto data = readFileIntoMemory(resourcePath, searchPath);
 				addDataToModule(data, glob.storageBegin, glob.storageSize, getModule(), llvmCtxt);
 			}
 			catch (const std::exception& ex) {
@@ -161,8 +162,8 @@ public:
 		return *mod;
 	}
 
-	CompileResourcesASTVisitor(ASTContext& ctxt)
-		: astCtxt(ctxt) {}
+	CompileResourcesASTVisitor(ASTContext& ctxt, const std::vector<StringRef>& paths)
+		: astCtxt(ctxt), searchPath(paths) {}
 
 	bool VisitVarDecl(VarDecl* decl) { // TODO: add error handling to avoid duplicate resource IDs
 		if (!decl->isConstexpr()
@@ -231,12 +232,13 @@ static std::pair<std::string, std::string> getOutputPaths(const std::string& inp
 
 class ResCompASTConsumer : public ASTConsumer {
 	std::string filePath;
+	const std::vector<StringRef>& searchPath;
 
 public:
-	ResCompASTConsumer(StringRef file) : filePath(file) {}
+	ResCompASTConsumer(StringRef file, const std::vector<StringRef>& paths) : filePath(file), searchPath(paths) {}
 
 	void HandleTranslationUnit(clang::ASTContext& ctxt) override {
-		CompileResourcesASTVisitor visitor(ctxt);
+		CompileResourcesASTVisitor visitor(ctxt, searchPath);
 		visitor.TraverseDecl(ctxt.getTranslationUnitDecl());
 
 		std::string objPath;
@@ -261,9 +263,34 @@ public:
 
 class ResCompFrontendAction : public ASTFrontendAction {
 	std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI, StringRef file) override {
-		return std::make_unique<ResCompASTConsumer>(file);
+		SmallString<512> fname{file};
+		llvm::sys::path::remove_filename(fname);
+		inputDirectory = fname.str();
+
+		searchPath.back() = inputDirectory;
+		return std::make_unique<ResCompASTConsumer>(file, searchPath);
+	}
+
+	std::vector<StringRef> searchPath;
+	std::string inputDirectory;
+public:
+	ResCompFrontendAction(const std::vector<std::string>& paths) : searchPath(paths.cbegin(), paths.cend()) {
+		searchPath.push_back(""); // create extra slot
 	}
 };
+
+
+template <typename F>
+std::unique_ptr<FrontendActionFactory> newFrontendActionFactoryFromLambda(F construct) {
+	class LambdaFrontendActionFactory : public FrontendActionFactory {
+		F constructFunc;
+	public:
+		LambdaFrontendActionFactory(F construct) : constructFunc(construct) {}
+		clang::FrontendAction *create() override { return constructFunc(); }
+	};
+
+	return std::unique_ptr<FrontendActionFactory>{ new LambdaFrontendActionFactory(construct) };
+}
 
 int main(int argc, const char *argv[]) {
 	CommonOptionsParser op(argc, argv, ToolingResCompCategory);
@@ -276,7 +303,8 @@ int main(int argc, const char *argv[]) {
 
 		if (srcPathRef.endswith_lower(".h") || srcPathRef.endswith_lower(".hpp")) {
 			llvm::sys::path::replace_extension(fname, ".cpp");
-			virtualCpps.push_back({ getAbsolutePath(fname.str()), "#include \"" + srcPath + "\"" });
+			std::string hdrName = llvm::sys::path::filename(srcPath);
+			virtualCpps.push_back({ getAbsolutePath(fname.str()), "#include \"" + hdrName + "\"" });
 			srcPath = fname.str();
 		}
 	}
@@ -288,5 +316,6 @@ int main(int argc, const char *argv[]) {
 		//llvm::outs() << "Mapped virtual file " + virt + ".cpp\n";
 	}
 
-	return tool.run(newFrontendActionFactory<ResCompFrontendAction>().get());
+	std::vector<std::string> searchPath; // TODO: populate from cmdline options
+	return tool.run(newFrontendActionFactoryFromLambda([&] { return new ResCompFrontendAction(searchPath); }).get());
 }
