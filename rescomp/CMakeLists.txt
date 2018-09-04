@@ -20,8 +20,8 @@ set(SOURCE_FILES
 
 add_executable(rescomp ${SOURCE_FILES})
 
-#llvm_map_components_to_libnames(LLVM_LIBS core support codegen analysis asmprinter
-#	x86asmparser x86asmprinter x86codegen x86desc x86info x86utils vectorize)
+llvm_map_components_to_libnames(LLVM_LIBS core support codegen analysis asmprinter
+	x86asmparser x86asmprinter x86codegen x86desc x86info x86utils vectorize option)
 
 set(CLANGTOOL_LIBS
    clangFrontend
@@ -36,5 +36,4 @@ set(CLANGTOOL_LIBS
    clangLex
    clangTooling)
 
-#target_link_libraries(rescomp ${LLVM_LIBS} ${CLANGTOOL_LIBS})
-target_link_libraries(rescomp LLVM ${CLANGTOOL_LIBS})
+target_link_libraries(rescomp ${CLANGTOOL_LIBS} ${LLVM_LIBS})
