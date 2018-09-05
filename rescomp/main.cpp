@@ -45,7 +45,10 @@ static llvm::cl::opt<std::string> MArch("march",
 	llvm::cl::desc("Architecture to generate code for"),
 	llvm::cl::cat(ToolingResCompCategory));
 
-// TODO: add resource search path option
+static llvm::cl::list<std::string> ResSearchPath("I",
+	llvm::cl::desc("Resource search path"),
+	llvm::cl::value_desc("directory"),
+	llvm::cl::cat(ToolingResCompCategory));
 
 struct MangledStorageGlobals {
 	std::string storageBegin;
@@ -274,7 +277,8 @@ class ResCompFrontendAction : public ASTFrontendAction {
 	std::vector<StringRef> searchPath;
 	std::string inputDirectory;
 public:
-	ResCompFrontendAction(const std::vector<std::string>& paths) : searchPath(paths.cbegin(), paths.cend()) {
+	template <typename Iter>
+	ResCompFrontendAction(Iter path_begin, Iter path_end) : searchPath(path_begin, path_end) {
 		searchPath.push_back(""); // create extra slot
 	}
 };
@@ -302,6 +306,7 @@ int main(int argc, const char *argv[]) {
 		SmallString<512> fname{srcPath};
 
 		if (srcPathRef.endswith_lower(".h") || srcPathRef.endswith_lower(".hpp")) {
+			// TODO: do our own existence check for header files before trying to parse the virtual cpp
 			llvm::sys::path::replace_extension(fname, ".cpp");
 			std::string hdrName = llvm::sys::path::filename(srcPath);
 			virtualCpps.push_back({ getAbsolutePath(fname.str()), "#include \"" + hdrName + "\"" });
@@ -316,6 +321,7 @@ int main(int argc, const char *argv[]) {
 		//llvm::outs() << "Mapped virtual file " + virt + ".cpp\n";
 	}
 
-	std::vector<std::string> searchPath; // TODO: populate from cmdline options
-	return tool.run(newFrontendActionFactoryFromLambda([&] { return new ResCompFrontendAction(searchPath); }).get());
+	return tool.run(newFrontendActionFactoryFromLambda([&] {
+		return new ResCompFrontendAction(ResSearchPath.begin(), ResSearchPath.end());
+	}).get());
 }
