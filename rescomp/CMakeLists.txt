@@ -38,4 +38,4 @@ set(CLANGTOOL_LIBS
    clangLex
    clangTooling)
 
-target_link_libraries(rescomp ${CLANGTOOL_LIBS} ${LLVM_LIBS})
+target_link_libraries(rescomp ${CLANGTOOL_LIBS} ${LLVM_LIBS} -static)

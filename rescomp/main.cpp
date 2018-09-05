@@ -79,8 +79,6 @@ public:
 			return true;
 		}
 
-		llvm::outs() << decl->getName() << '\n';
-
 		{
 			llvm::raw_string_ostream strout(mangledVarName);
 			mangleCtxt->mangleName(decl, strout);
@@ -129,7 +127,7 @@ private:
 			MangleStorageNamesASTVisitor resCompVisitor(resourceID, resourcePath, glob);
 			resCompVisitor.TraverseDecl(ast->getASTContext().getTranslationUnitDecl());
 
-			llvm::outs() << "begin: " << glob.storageBegin << ", size: " << glob.storageSize << '\n';
+			//llvm::outs() << "begin: " << glob.storageBegin << ", size: " << glob.storageSize << '\n';
 			try {
 				auto data = readFileIntoMemory(resourcePath, searchPath);
 				addDataToModule(data, glob.storageBegin, glob.storageSize, getModule(), llvmCtxt);
@@ -208,7 +206,7 @@ public:
 		auto pathValue = dyn_cast<StringLiteral>(arg);
 		std::string resourcePath = pathValue->getString();
 
-		llvm::outs() << "Resource: ID = " << resourceID << ", PATH = \"" << resourcePath << "\"\n";
+		//llvm::outs() << "Resource: ID = " << resourceID << ", PATH = \"" << resourcePath << "\"\n";
 		constructStorageGlobals(resourceID, resourcePath);
 
 		return true;

@@ -1,9 +1,6 @@
 #pragma once
 
 #include <cstdint>
-#include <type_traits>
-#include <stdexcept>
-#include <utility>
 
 namespace resman {
 	// fwd
@@ -11,7 +8,7 @@ namespace resman {
 
 	template <uint32_t N>
 	struct Resource {
-		template <size_t S>
+		template <uint32_t S>
 		constexpr Resource(const char (&path)[S]) {}
 
 	private:
