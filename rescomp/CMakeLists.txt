@@ -9,8 +9,13 @@ find_package(LLVM REQUIRED CONFIG)
 include_directories(${LLVM_INCLUDE_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
 
-
-link_directories("/usr/lib/llvm-6.0/lib")
+IF(APPLE)
+	link_directories("${CMAKE_PREFIX_PATH}/lib")
+	set(LINK_STATICALLY "")
+ELSE()
+	link_directories("/usr/lib/llvm-6.0/lib")
+	set(LINK_STATICALLY "-static")
+ENDIF()
 
 set(COMMON "../common")
 
@@ -38,4 +43,4 @@ set(CLANGTOOL_LIBS
    clangLex
    clangTooling)
 
-target_link_libraries(rescomp ${CLANGTOOL_LIBS} ${LLVM_LIBS} -static)
+target_link_libraries(rescomp ${CLANGTOOL_LIBS} ${LLVM_LIBS} ${LINK_STATICALLY})

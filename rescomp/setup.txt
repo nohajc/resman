@@ -1,0 +1,10 @@
+Linux
+- run in git project root:
+  mkdir build && cd build && cmake ../rescomp && make
+
+macOS
+- install llvm & clang with development tools:
+  brew install --with-toolchain llvm
+
+- run in git project root:
+  mkdir build && cd build && make -DCMAKE_PREFIX_PATH=/usr/local/opt/llvm/Toolchains/LLVM6.0.1.xctoolchain/usr ../rescomp && make

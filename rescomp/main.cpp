@@ -107,18 +107,17 @@ class CompileResourcesASTVisitor : public RecursiveASTVisitor<CompileResourcesAS
 	void constructStorageGlobals(uint64_t resourceID, const std::string& resourcePath) {
 		std::string code;
 		llvm::raw_string_ostream codestream(code);
-		codestream << "#include <cstdint>\n";
 		codestream << "namespace resman {\n";
 		codestream << R"__(
-template <uint32_t N>
+template <unsigned N>
 struct Resource {
 private:
 	static const char storage_begin[];
-	static const uint32_t storage_size;
+	static const unsigned storage_size;
 };
 		)__";
 		codestream << "template <> const char Resource<" << resourceID << ">::storage_begin[] = \"dummy\";\n";
-		codestream << "template <> const uint32_t Resource<" << resourceID << ">::storage_size{6};\n";
+		codestream << "template <> const unsigned Resource<" << resourceID << ">::storage_size{6};\n";
 		codestream << "}";
 
 		auto ast = buildASTFromCode(codestream.str());
