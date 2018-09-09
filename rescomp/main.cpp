@@ -36,17 +36,16 @@ constexpr const char libext[] = ".a";
 static llvm::cl::OptionCategory ToolingResCompCategory("Resource Compiler");
 
 static llvm::cl::opt<std::string> OutputDirectory("o",
-	llvm::cl::desc("Specify output directory"),
-	llvm::cl::value_desc("directory"),
+	llvm::cl::desc("Specify output directory (current directory by default)"),
+	llvm::cl::value_desc("directory"), // TODO: change to "output file" and generate only one object file / library for all input sources
 	llvm::cl::cat(ToolingResCompCategory));
 
 static llvm::cl::opt<std::string> MArch("march",
-	llvm::cl::Required,
-	llvm::cl::desc("Architecture to generate code for"),
+	llvm::cl::desc("Architecture to generate code for (native by default)"),
 	llvm::cl::cat(ToolingResCompCategory));
 
 static llvm::cl::list<std::string> ResSearchPath("I",
-	llvm::cl::desc("Resource search path"),
+	llvm::cl::desc("Resource search path (can be used more than once for multiple paths)"),
 	llvm::cl::value_desc("directory"),
 	llvm::cl::cat(ToolingResCompCategory));
 
