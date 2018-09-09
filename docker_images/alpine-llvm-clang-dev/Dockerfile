@@ -15,7 +15,7 @@ RUN apk update \
 	&& cd ../.. \
 	&& mkdir build \
 	&& cd build \
-	&& cmake -DCMAKE_BUILD_TYPE=MinSizeRel -DLLVM_ENABLE_RTTI=TRUE -DLLVM_ENABLE_EH=TRUE ../llvm-6.0.1.src \
+	&& cmake -DCMAKE_BUILD_TYPE=Release -DLLVM_TARGETS_TO_BUILD="X86" -DLLVM_ENABLE_RTTI=TRUE -DLLVM_ENABLE_EH=TRUE ../llvm-6.0.1.src \
 	&& make -j5 \
 	&& make install \
 	&& cd .. \
