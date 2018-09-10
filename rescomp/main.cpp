@@ -11,6 +11,7 @@
 
 #include <llvm/IR/Verifier.h>
 #include <llvm/Support/Path.h>
+#include <llvm/Support/FileSystem.h>
 
 #include <iostream>
 #include <utility>
@@ -35,9 +36,10 @@ constexpr const char libext[] = ".a";
 
 static llvm::cl::OptionCategory ToolingResCompCategory("Resource Compiler");
 
-static llvm::cl::opt<std::string> OutputDirectory("o",
-	llvm::cl::desc("Specify output directory (current directory by default)"),
-	llvm::cl::value_desc("directory"), // TODO: change to "output file" and generate only one object file / library for all input sources
+static llvm::cl::opt<std::string> OutputFilePath("o",
+	llvm::cl::Required,
+	llvm::cl::desc("Specify output file"),
+	llvm::cl::value_desc("path"),
 	llvm::cl::cat(ToolingResCompCategory));
 
 static llvm::cl::opt<std::string> MArch("march",
@@ -100,8 +102,8 @@ static llvm::LLVMContext llvmCtxt;
 
 class CompileResourcesASTVisitor : public RecursiveASTVisitor<CompileResourcesASTVisitor> {
 	ASTContext& astCtxt;
-	std::unique_ptr<llvm::Module> mod;
-	const std::vector<StringRef>& searchPath;
+	ArrayRef<StringRef> searchPath;
+	llvm::Module& outputModule;
 
 	void constructStorageGlobals(uint64_t resourceID, const std::string& resourcePath) {
 		std::string code;
@@ -128,7 +130,7 @@ private:
 			//llvm::outs() << "begin: " << glob.storageBegin << ", size: " << glob.storageSize << '\n';
 			try {
 				auto data = readFileIntoMemory(resourcePath, searchPath);
-				addDataToModule(data, glob.storageBegin, glob.storageSize, getModule(), llvmCtxt);
+				addDataToModule(data, glob.storageBegin, glob.storageSize, outputModule, llvmCtxt);
 			}
 			catch (const std::exception& ex) {
 				llvm::errs() << ex.what() << '\n';
@@ -154,15 +156,8 @@ private:
 	}
 
 public:
-	llvm::Module& getModule() {
-		if (!mod) {
-			mod.reset(new llvm::Module("resource", llvmCtxt));
-		}
-		return *mod;
-	}
-
-	CompileResourcesASTVisitor(ASTContext& ctxt, const std::vector<StringRef>& paths)
-		: astCtxt(ctxt), searchPath(paths) {}
+	CompileResourcesASTVisitor(ASTContext& ctxt, ArrayRef<StringRef> paths, llvm::Module& mod)
+		: astCtxt(ctxt), searchPath(paths), outputModule(mod) {}
 
 	bool VisitVarDecl(VarDecl* decl) { // TODO: add error handling to avoid duplicate resource IDs
 		if (!decl->isConstexpr()
@@ -211,74 +206,39 @@ public:
 	}
 };
 
-static std::pair<std::string, std::string> getOutputPaths(const std::string& inputPath) {
-	SmallString<512> fnameBuf(inputPath);
-
-	if (!OutputDirectory.empty()) {
-		auto fname = llvm::sys::path::filename(inputPath);
-		fnameBuf = SmallString<512>(OutputDirectory);
-		llvm::sys::path::append(fnameBuf, fname);
-	}
-
-	llvm::sys::path::replace_extension(fnameBuf, objext);
-	std::string objPath = fnameBuf.str();
-
-	llvm::sys::path::replace_extension(fnameBuf, libext);
-	std::string libPath = fnameBuf.str();
-
-	return { objPath, libPath };
-}
-
 class ResCompASTConsumer : public ASTConsumer {
-	std::string filePath;
-	const std::vector<StringRef>& searchPath;
+	ArrayRef<StringRef> searchPath;
+	llvm::Module& outputModule;
 
 public:
-	ResCompASTConsumer(StringRef file, const std::vector<StringRef>& paths) : filePath(file), searchPath(paths) {}
+	ResCompASTConsumer(ArrayRef<StringRef> paths, llvm::Module& mod)
+		: searchPath(paths), outputModule(mod) {}
 
 	void HandleTranslationUnit(clang::ASTContext& ctxt) override {
-		CompileResourcesASTVisitor visitor(ctxt, searchPath);
+		CompileResourcesASTVisitor visitor(ctxt, searchPath, outputModule);
 		visitor.TraverseDecl(ctxt.getTranslationUnitDecl());
-
-		std::string objPath;
-		std::string libPath;
-		std::tie(objPath, libPath) = getOutputPaths(filePath);
-
-		//llvm::outs() << "Input: " << filePath << '\n';
-		//llvm::outs() << "Output: " << libPath << '\n';
-
-		auto& mod = visitor.getModule();
-		llvm::verifyModule(mod);
-
-		try {	
-			generateObjectFile(mod, objPath, MArch);
-			packIntoLib(objPath, libPath);
-		}
-		catch (const std::exception& ex) {
-			llvm::errs() << ex.what() << '\n';
-		}
 	}
 };
 
 class ResCompFrontendAction : public ASTFrontendAction {
 	std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI, StringRef file) override {
-		SmallString<512> fname{file};
+		SmallString<260> fname{file};
 		llvm::sys::path::remove_filename(fname);
 		inputDirectory = fname.str();
 
-		searchPath.back() = inputDirectory;
-		return std::make_unique<ResCompASTConsumer>(file, searchPath);
+		resSearchPath.back() = inputDirectory;
+		return std::make_unique<ResCompASTConsumer>(resSearchPath, outputModule);
 	}
 
-	std::vector<StringRef> searchPath;
+	std::vector<StringRef> resSearchPath;
 	std::string inputDirectory;
+	llvm::Module& outputModule;
 public:
-	template <typename Iter>
-	ResCompFrontendAction(Iter path_begin, Iter path_end) : searchPath(path_begin, path_end) {
-		searchPath.push_back(""); // create extra slot
+	ResCompFrontendAction(ArrayRef<std::string> searchPath,	llvm::Module& mod)
+		: resSearchPath(searchPath.begin(), searchPath.end()), outputModule(mod) {
+		resSearchPath.push_back(""); // create extra slot
 	}
 };
-
 
 template <typename F>
 std::unique_ptr<FrontendActionFactory> newFrontendActionFactoryFromLambda(F construct) {
@@ -292,14 +252,58 @@ std::unique_ptr<FrontendActionFactory> newFrontendActionFactoryFromLambda(F cons
 	return std::unique_ptr<FrontendActionFactory>{ new LambdaFrontendActionFactory(construct) };
 }
 
-int main(int argc, const char *argv[]) {
+class ObjOrLibPath {
+	enum class Type {
+		Obj, Lib
+	} type;
+
+	std::string objPath;
+	std::string libPath;
+
+	static Type getOutputType(StringRef path) {
+		if (path.endswith(objext)) {
+			return Type::Obj;
+		}
+		if (path.endswith(libext)) {
+			return Type::Lib;
+		}
+		throw std::runtime_error("Output must be an object file or a static library.");
+	}
+
+public:
+	ObjOrLibPath(StringRef path)
+		: type(getOutputType(path))
+		, objPath(type == Type::Obj ? path : "")
+		, libPath(type == Type::Lib ? path : "") {
+		if (type == Type::Lib) {
+			llvm::SmallString<260> filePath{ libPath };
+			llvm::sys::path::replace_extension(filePath, objext);
+			objPath = filePath.str();
+		}
+		// if type == Type::Obj, we won't need the libPath
+	}
+
+	bool isLib() {
+		return type == Type::Lib;
+	}
+
+	const std::string& obj() {
+		return objPath;
+	}
+
+	const std::string& lib() {
+		return libPath;
+	}
+};
+
+int main(int argc, const char *argv[]) { // TODO: simulate `--` option to make sure we won't get any compiler db warnings
 	CommonOptionsParser op(argc, argv, ToolingResCompCategory);
 	auto sourcePathList = op.getSourcePathList();
 
 	std::vector<std::pair<std::string, std::string>> virtualCpps;
 	for (auto& srcPath : sourcePathList) {
 		StringRef srcPathRef(srcPath);
-		SmallString<512> fname{srcPath};
+		SmallString<260> fname{srcPath};
 
 		if (srcPathRef.endswith_lower(".h") || srcPathRef.endswith_lower(".hpp")) {
 			// TODO: do our own existence check for header files before trying to parse the virtual cpp
@@ -317,7 +321,45 @@ int main(int argc, const char *argv[]) {
 		//llvm::outs() << "Mapped virtual file " + virt + ".cpp\n";
 	}
 
-	return tool.run(newFrontendActionFactoryFromLambda([&] {
-		return new ResCompFrontendAction(ResSearchPath.begin(), ResSearchPath.end());
+	auto mod = std::make_unique<llvm::Module>("resource", llvmCtxt);
+
+	int returnCode = tool.run(newFrontendActionFactoryFromLambda([&] {
+		return new ResCompFrontendAction(ResSearchPath, *mod);
 	}).get());
+
+	llvm::verifyModule(*mod);
+
+	if (returnCode) return returnCode;
+
+	try {
+		ObjOrLibPath output{OutputFilePath};
+
+		std::error_code errc;
+		// TODO: objFile should be in tmp in case we're generating lib
+		// to make sure we don't overwrite any existing file
+		llvm::ToolOutputFile objFile(output.obj(), errc, llvm::sys::fs::F_None);
+		if (errc) {
+			throw std::runtime_error("Cannot open output file.");
+		}
+
+		generateObjectFile(*mod, objFile, MArch);
+		objFile.os().flush();
+
+		if (output.isLib()) {
+			packIntoLib(output.obj(), output.lib());
+			// If a client specifies he only wants the static lib,
+			// not calling `keep` will cause the object file to be deleted.
+
+			// TODO: find out why objFile is not deleted if the output is not in the current working directory
+		}
+		else { // On the other hand, if object file was specified, we do want to keep it.
+			objFile.keep();
+		}
+	}
+	catch (const std::exception& ex) {
+		llvm::errs() << ex.what() << '\n';
+		return 1;
+	}
+
+	return 0;
 }

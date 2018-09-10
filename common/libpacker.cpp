@@ -6,11 +6,11 @@
 using namespace llvm;
 
 void packIntoLib(const std::string& ifname, const std::string& ofname) {
-	SmallString<512> dir(ifname);
+	SmallString<260> dir(ifname);
 	sys::path::remove_filename(dir);
 	std::string idir = dir.str();
 
-	SmallString<512> fname(ofname);
+	SmallString<260> fname(ofname);
 	sys::fs::make_absolute(fname);
 	auto ofname_abs = fname.str();
 

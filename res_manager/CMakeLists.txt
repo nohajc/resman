@@ -9,7 +9,7 @@ find_program(RESCOMP rescomp)
 message(STATUS "Found resource compiler: ${RESCOMP}")
 
 add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/test.o
-	COMMAND ${RESCOMP} ${CMAKE_CURRENT_SOURCE_DIR}/test.h -march x86-64 -o ${CMAKE_CURRENT_BINARY_DIR} --
+	COMMAND ${RESCOMP} ${CMAKE_CURRENT_SOURCE_DIR}/test.h -o ${CMAKE_CURRENT_BINARY_DIR}/test.o --
 	DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/test.h)
 
 set(SOURCE_FILES

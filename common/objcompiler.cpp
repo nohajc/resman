@@ -87,7 +87,17 @@ static std::string getFeaturesStr() {
 	return Features.getString();
 }
 
-void generateObjectFile(Module& mod, const std::string& ofname, const std::string& arch) {
+void generateObjectFile(Module& mod, const std::string& objFilename, const std::string& mArch) {
+	std::error_code errc;
+	llvm::ToolOutputFile objFile(objFilename, errc, llvm::sys::fs::F_None);
+	if (errc) {
+		throw std::runtime_error("Cannot open output file.");
+	}
+	generateObjectFile(mod, objFile, mArch);
+	objFile.keep();
+}
+
+void generateObjectFile(Module& mod, ToolOutputFile& objFile, const std::string& mArch) {
 	auto fileType = TargetMachine::CGFT_ObjectFile;
 
 	LLVMInitializeX86TargetInfo();
@@ -124,8 +134,6 @@ void generateObjectFile(Module& mod, const std::string& ofname, const std::strin
 
 	Triple theTriple(sys::getDefaultTargetTriple());
 
-	std::string mArch = arch;
-
 	std::string error;
 	const Target *theTarget = TargetRegistry::lookupTarget(mArch, theTriple, error);
 
@@ -139,13 +147,6 @@ void generateObjectFile(Module& mod, const std::string& ofname, const std::strin
 	std::unique_ptr<TargetMachine> target(theTarget->createTargetMachine(
 		theTriple.getTriple(), CPUStr, FeaturesStr, options, llvm::None));
 
-	std::error_code errc;
-	ToolOutputFile out(ofname, errc, sys::fs::F_None);
-
-	if (errc) {
-		throw std::runtime_error("Cannot open output file. ");
-	}
-
 	legacy::PassManager PM;
 	TargetLibraryInfoImpl TLII(Triple(mod.getTargetTriple()));
 
@@ -153,11 +154,11 @@ void generateObjectFile(Module& mod, const std::string& ofname, const std::strin
 	mod.setDataLayout(target->createDataLayout());
 
 	{
-		raw_pwrite_stream *OS = &out.os();
+		raw_pwrite_stream *OS = &objFile.os();
 		SmallVector<char, 0> Buffer;
 		std::unique_ptr<raw_svector_ostream> BOS;
 
-		if (!out.os().supportsSeeking()) {
+		if (!objFile.os().supportsSeeking()) {
 			BOS = make_unique<raw_svector_ostream>(Buffer);
 			OS = BOS.get();
 		}
@@ -178,9 +179,7 @@ void generateObjectFile(Module& mod, const std::string& ofname, const std::strin
 		}
 
 		if (BOS) {
-			out.os() << Buffer;
+			objFile.os() << Buffer;
 		}
-
-		out.keep();
 	}
 }
