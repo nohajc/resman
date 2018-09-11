@@ -1,4 +1,5 @@
 #include "fileio.h"
+#include "fsutil.h"
 #include <fstream>
 #include <utility>
 #include <llvm/Support/FileSystem.h>
@@ -29,12 +30,7 @@ std::vector<char> readFileIntoMemory(const std::string& ifname, const std::vecto
 		return contents;
 	}
 
-	SmallString<512> cwdir;
-	sys::fs::current_path(cwdir);
-
-	auto resetCwdir = make_scope_exit([&] {
-		sys::fs::set_current_path(cwdir.str());
-	});
+	StashCWD restoreCwdOnScopeExit;
 
 	for (StringRef dir : searchPath) { // if not, try search path
 		//llvm::outs() << "Searching input in " << dir << "\n";

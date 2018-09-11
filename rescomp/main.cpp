@@ -46,7 +46,7 @@ static llvm::cl::opt<std::string> MArch("march",
 	llvm::cl::desc("Architecture to generate code for (native by default)"),
 	llvm::cl::cat(ToolingResCompCategory));
 
-static llvm::cl::list<std::string> ResSearchPath("I",
+static llvm::cl::list<std::string> ResSearchPath("R",
 	llvm::cl::desc("Resource search path (can be used more than once for multiple paths)"),
 	llvm::cl::value_desc("directory"),
 	llvm::cl::cat(ToolingResCompCategory));
@@ -276,23 +276,63 @@ public:
 		, objPath(type == Type::Obj ? path : "")
 		, libPath(type == Type::Lib ? path : "") {
 		if (type == Type::Lib) {
+			using namespace std::string_literals;
+
 			llvm::SmallString<260> filePath{ libPath };
-			llvm::sys::path::replace_extension(filePath, objext);
+			llvm::sys::path::replace_extension(filePath, "");
+			filePath += "-%%%%%%%"s + objext;
 			objPath = filePath.str();
 		}
 		// if type == Type::Obj, we won't need the libPath
 	}
 
-	bool isLib() {
+	bool isLib() const {
 		return type == Type::Lib;
 	}
 
-	const std::string& obj() {
+	const std::string& obj() const {
 		return objPath;
 	}
 
-	const std::string& lib() {
+	const std::string& lib() const {
 		return libPath;
+	}
+};
+
+class OpenOutputObjFile {
+protected:
+	SmallString<260> actualPath;
+	int fd;
+
+public:
+	OpenOutputObjFile(const ObjOrLibPath& output) {
+		std::error_code errc;
+
+		// object file should have a unique name in case we're generating lib
+		// to make sure we don't overwrite any existing file
+		if (output.isLib()) {
+			errc = llvm::sys::fs::createUniqueFile(output.obj(), fd, actualPath, llvm::sys::fs::all_write);
+		}
+		else {
+			errc = llvm::sys::fs::openFileForWrite(output.obj(), fd, llvm::sys::fs::F_None);
+			actualPath = output.obj();
+		}
+
+		if (errc) {
+			throw std::runtime_error("Cannot open output file.");
+		}
+	}
+
+	StringRef path() {
+		return actualPath.str();
+	}
+};
+
+class OutputObjFile : public OpenOutputObjFile, public llvm::ToolOutputFile {
+public:
+	OutputObjFile(const ObjOrLibPath& output)
+		: OpenOutputObjFile(output), llvm::ToolOutputFile(actualPath, fd) {
+		llvm::outs() << "Opened output file " << actualPath << '\n';
 	}
 };
 
@@ -333,24 +373,16 @@ int main(int argc, const char *argv[]) { // TODO: simulate `--` option to make s
 
 	try {
 		ObjOrLibPath output{OutputFilePath};
-
-		std::error_code errc;
-		// TODO: objFile should be in tmp in case we're generating lib
-		// to make sure we don't overwrite any existing file
-		llvm::ToolOutputFile objFile(output.obj(), errc, llvm::sys::fs::F_None);
-		if (errc) {
-			throw std::runtime_error("Cannot open output file.");
-		}
+		// objFile will have a randomized name in case we're generating static lib
+		OutputObjFile objFile{output};
 
 		generateObjectFile(*mod, objFile, MArch);
 		objFile.os().flush();
 
 		if (output.isLib()) {
-			packIntoLib(output.obj(), output.lib());
+			packIntoLib(objFile.path(), output.lib());
 			// If a client specifies he only wants the static lib,
 			// not calling `keep` will cause the object file to be deleted.
-
-			// TODO: find out why objFile is not deleted if the output is not in the current working directory
 		}
 		else { // On the other hand, if object file was specified, we do want to keep it.
 			objFile.keep();

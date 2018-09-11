@@ -137,6 +137,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\common\fileio.h" />
+    <ClInclude Include="..\common\fsutil.h" />
     <ClInclude Include="..\common\libpacker.h" />
     <ClInclude Include="..\common\objcompiler.h" />
   </ItemGroup>

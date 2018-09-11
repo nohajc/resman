@@ -1,4 +1,5 @@
 #include "libpacker.h"
+#include "fsutil.h"
 #include <llvm/Object/ArchiveWriter.h>
 #include <llvm/Support/Path.h>
 #include <llvm/Support/FileSystem.h>
@@ -6,6 +7,7 @@
 using namespace llvm;
 
 void packIntoLib(const std::string& ifname, const std::string& ofname) {
+	StashCWD restoreCwdOnScopeExit;
 	SmallString<260> dir(ifname);
 	sys::path::remove_filename(dir);
 	std::string idir = dir.str();
