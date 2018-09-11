@@ -331,9 +331,7 @@ public:
 class OutputObjFile : public OpenOutputObjFile, public llvm::ToolOutputFile {
 public:
 	OutputObjFile(const ObjOrLibPath& output)
-		: OpenOutputObjFile(output), llvm::ToolOutputFile(actualPath, fd) {
-		llvm::outs() << "Opened output file " << actualPath << '\n';
-	}
+		: OpenOutputObjFile(output), llvm::ToolOutputFile(actualPath, fd) {}
 };
 
 int main(int argc, const char *argv[]) { // TODO: simulate `--` option to make sure we won't get any compiler db warnings
