@@ -353,8 +353,8 @@ int main(int argc, const char *argv[]) {
 
 	CommonOptionsParser op(argCnt, args.data(), ToolingResCompCategory,
 R"__(Resource compiler
-Converts one ore more files into linkable object files
-or static libraries based on C++ header declarations.
+Converts one ore more files into a linkable object file
+or a static library based on C++ header declarations.
 )__");
 	auto sourcePathList = op.getSourcePathList();
 
