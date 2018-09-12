@@ -35,6 +35,7 @@ constexpr const char libext[] = ".a";
 #endif
 
 static llvm::cl::OptionCategory ToolingResCompCategory("Resource Compiler");
+//static llvm::cl::extrahelp CommonHelp(CommonOptionsParser::HelpMessage);
 
 static llvm::cl::opt<std::string> OutputFilePath("o",
 	llvm::cl::Required,
@@ -350,7 +351,11 @@ int main(int argc, const char *argv[]) {
 		argCnt++;
 	}
 
-	CommonOptionsParser op(argCnt, args.data(), ToolingResCompCategory);
+	CommonOptionsParser op(argCnt, args.data(), ToolingResCompCategory,
+R"__(Resource compiler
+Converts one ore more files into linkable object files
+or static libraries based on C++ header declarations.
+)__");
 	auto sourcePathList = op.getSourcePathList();
 
 	std::vector<std::pair<std::string, std::string>> virtualCpps;
