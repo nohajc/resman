@@ -29,6 +29,6 @@ void packIntoLib(const std::string& ifname, const std::string& ofname) {
 	// only takes absolute archive path!
 	Error err = writeArchive(ofname_abs, member, true, object::Archive::K_GNU, true, false);
 	if (err) {
-		throw std::runtime_error("Error writing static library file.");
+		throw std::runtime_error("Could not write static library file.");
 	}
 }

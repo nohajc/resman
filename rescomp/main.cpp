@@ -51,6 +51,10 @@ static llvm::cl::list<std::string> ResSearchPath("R",
 	llvm::cl::value_desc("directory"),
 	llvm::cl::cat(ToolingResCompCategory));
 
+// TODO: include search path (we must be able to locate Resource.h)
+// program directory path could be included implicitly or we could even
+// pack the header as a resource and map it as a virtual file (nice bootstrapping)
+
 struct MangledStorageGlobals {
 	std::string storageBegin;
 	std::string storageSize;
@@ -133,7 +137,7 @@ private:
 				addDataToModule(data, glob.storageBegin, glob.storageSize, outputModule, llvmCtxt);
 			}
 			catch (const std::exception& ex) {
-				llvm::errs() << ex.what() << '\n';
+				llvm::errs() << "Error: " << ex.what() << '\n';
 			}
 		}
 	}
@@ -334,22 +338,43 @@ public:
 		: OpenOutputObjFile(output), llvm::ToolOutputFile(actualPath, fd) {}
 };
 
-int main(int argc, const char *argv[]) { // TODO: simulate `--` option to make sure we won't get any compiler db warnings
-	CommonOptionsParser op(argc, argv, ToolingResCompCategory);
+int main(int argc, const char *argv[]) {
+	using namespace std::string_literals;
+
+	std::vector<const char*> args(argv, argv + argc);
+	int argCnt = argc;
+	if (args[argc - 1] != "--"s) {
+		// We don't want to work with compilation databases.
+		// If the `--` option wasn't specified, pretend it was.
+		args.push_back("--");
+		argCnt++;
+	}
+
+	CommonOptionsParser op(argCnt, args.data(), ToolingResCompCategory);
 	auto sourcePathList = op.getSourcePathList();
 
 	std::vector<std::pair<std::string, std::string>> virtualCpps;
-	for (auto& srcPath : sourcePathList) {
-		StringRef srcPathRef(srcPath);
-		SmallString<260> fname{srcPath};
+	try {
+		for (auto& srcPath : sourcePathList) {
+			StringRef srcPathRef(srcPath);
+			SmallString<260> fname{ srcPath };
 
-		if (srcPathRef.endswith_lower(".h") || srcPathRef.endswith_lower(".hpp")) {
-			// TODO: do our own existence check for header files before trying to parse the virtual cpp
-			llvm::sys::path::replace_extension(fname, ".cpp");
-			std::string hdrName = llvm::sys::path::filename(srcPath);
-			virtualCpps.push_back({ getAbsolutePath(fname.str()), "#include \"" + hdrName + "\"" });
-			srcPath = fname.str();
+			if (srcPathRef.endswith_lower(".h") || srcPathRef.endswith_lower(".hpp")) {
+				// Do our own existence check for header files before trying to parse the virtual cpp
+				if (!llvm::sys::fs::exists(srcPath)) {
+					throw std::runtime_error("Input file " + srcPath + " does not exist.");
+				}
+
+				llvm::sys::path::replace_extension(fname, ".cpp");
+				std::string hdrName = llvm::sys::path::filename(srcPath);
+				virtualCpps.push_back({ getAbsolutePath(fname.str()), "#include \"" + hdrName + "\"" });
+				srcPath = fname.str();
+			}
 		}
+	}
+	catch (const std::exception& ex) {
+		llvm::errs() << "Error: " << ex.what() << '\n';
+		return 1;
 	}
 
 	ClangTool tool(op.getCompilations(), sourcePathList);
@@ -387,7 +412,7 @@ int main(int argc, const char *argv[]) { // TODO: simulate `--` option to make s
 		}
 	}
 	catch (const std::exception& ex) {
-		llvm::errs() << ex.what() << '\n';
+		llvm::errs() << "Error: " << ex.what() << '\n';
 		return 1;
 	}
 
