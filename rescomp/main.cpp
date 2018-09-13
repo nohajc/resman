@@ -12,6 +12,7 @@
 #include <llvm/IR/Verifier.h>
 #include <llvm/Support/Path.h>
 #include <llvm/Support/FileSystem.h>
+#include <llvm/ADT/DenseSet.h>
 
 #include <iostream>
 #include <utility>
@@ -55,6 +56,34 @@ static llvm::cl::list<std::string> ResSearchPath("R",
 // TODO: include search path (we must be able to locate Resource.h)
 // program directory path could be included implicitly or we could even
 // pack the header as a resource and map it as a virtual file (nice bootstrapping)
+
+
+static llvm::LLVMContext llvmCtxt;
+
+class RescompContext {
+	std::unique_ptr<llvm::Module> pMod;
+	llvm::DenseSet<unsigned> resIDs;
+	bool error = false;
+
+public:
+	RescompContext(StringRef moduleName) : pMod(new llvm::Module(moduleName, llvmCtxt)) {}
+
+	llvm::Module& getModule() {
+		return *pMod;
+	}
+
+	llvm::DenseSet<unsigned>& getResIDs() {
+		return resIDs;
+	}
+
+	bool errorOccured() const {
+		return error;
+	}
+
+	void setErrorFlag() {
+		error = true;
+	}
+};
 
 struct MangledStorageGlobals {
 	std::string storageBegin;
@@ -103,14 +132,22 @@ public:
 	}
 };
 
-static llvm::LLVMContext llvmCtxt;
-
 class CompileResourcesASTVisitor : public RecursiveASTVisitor<CompileResourcesASTVisitor> {
 	ASTContext& astCtxt;
 	ArrayRef<StringRef> searchPath;
-	llvm::Module& outputModule;
+	RescompContext& resCtxt;
 
-	void constructStorageGlobals(uint64_t resourceID, const std::string& resourcePath) {
+	bool constructStorageGlobals(uint64_t resourceID, const std::string& resourcePath) {
+		bool inserted;
+		std::tie(std::ignore, inserted) = resCtxt.getResIDs().insert(resourceID);
+
+		if (!inserted) {
+			// TODO: also show the location of previous definition
+			llvm::errs() << "Redefinition of Resource with the same ID: Resource<" << resourceID << ">.\n";
+			resCtxt.setErrorFlag();
+			return false;
+		}
+
 		std::string code;
 		llvm::raw_string_ostream codestream(code);
 		codestream << "namespace resman {\n";
@@ -135,12 +172,14 @@ private:
 			//llvm::outs() << "begin: " << glob.storageBegin << ", size: " << glob.storageSize << '\n';
 			try {
 				auto data = readFileIntoMemory(resourcePath, searchPath);
-				addDataToModule(data, glob.storageBegin, glob.storageSize, outputModule, llvmCtxt);
+				addDataToModule(data, glob.storageBegin, glob.storageSize, resCtxt.getModule(), llvmCtxt);
 			}
 			catch (const std::exception& ex) {
 				llvm::errs() << "Error: " << ex.what() << '\n';
 			}
 		}
+
+		return true;
 	}
 
 	uint64_t evalTmplArgumentExpr(Expr* tmplArgExpr) {
@@ -161,10 +200,10 @@ private:
 	}
 
 public:
-	CompileResourcesASTVisitor(ASTContext& ctxt, ArrayRef<StringRef> paths, llvm::Module& mod)
-		: astCtxt(ctxt), searchPath(paths), outputModule(mod) {}
+	CompileResourcesASTVisitor(ASTContext& ctxt, ArrayRef<StringRef> paths, RescompContext& rctxt)
+		: astCtxt(ctxt), searchPath(paths), resCtxt(rctxt) {}
 
-	bool VisitVarDecl(VarDecl* decl) { // TODO: add error handling to avoid duplicate resource IDs
+	bool VisitVarDecl(VarDecl* decl) {
 		if (!decl->isConstexpr()
 			|| !decl->isDefinedOutsideFunctionOrMethod()
 			|| !decl->isThisDeclarationADefinition()) {
@@ -205,22 +244,20 @@ public:
 		std::string resourcePath = pathValue->getString();
 
 		//llvm::outs() << "Resource: ID = " << resourceID << ", PATH = \"" << resourcePath << "\"\n";
-		constructStorageGlobals(resourceID, resourcePath);
-
-		return true;
+		return constructStorageGlobals(resourceID, resourcePath);
 	}
 };
 
 class ResCompASTConsumer : public ASTConsumer {
 	ArrayRef<StringRef> searchPath;
-	llvm::Module& outputModule;
+	RescompContext& resCtxt;
 
 public:
-	ResCompASTConsumer(ArrayRef<StringRef> paths, llvm::Module& mod)
-		: searchPath(paths), outputModule(mod) {}
+	ResCompASTConsumer(ArrayRef<StringRef> paths, RescompContext& rctxt)
+		: searchPath(paths), resCtxt(rctxt) {}
 
 	void HandleTranslationUnit(clang::ASTContext& ctxt) override {
-		CompileResourcesASTVisitor visitor(ctxt, searchPath, outputModule);
+		CompileResourcesASTVisitor visitor(ctxt, searchPath, resCtxt);
 		visitor.TraverseDecl(ctxt.getTranslationUnitDecl());
 	}
 };
@@ -232,15 +269,15 @@ class ResCompFrontendAction : public ASTFrontendAction {
 		inputDirectory = fname.str();
 
 		resSearchPath.back() = inputDirectory;
-		return std::make_unique<ResCompASTConsumer>(resSearchPath, outputModule);
+		return std::make_unique<ResCompASTConsumer>(resSearchPath, resCtxt);
 	}
 
 	std::vector<StringRef> resSearchPath;
 	std::string inputDirectory;
-	llvm::Module& outputModule;
+	RescompContext& resCtxt;
 public:
-	ResCompFrontendAction(ArrayRef<std::string> searchPath,	llvm::Module& mod)
-		: resSearchPath(searchPath.begin(), searchPath.end()), outputModule(mod) {
+	ResCompFrontendAction(ArrayRef<std::string> searchPath,	RescompContext& rctxt)
+		: resSearchPath(searchPath.begin(), searchPath.end()), resCtxt(rctxt) {
 		resSearchPath.push_back(""); // create extra slot
 	}
 };
@@ -389,22 +426,28 @@ or a static library based on C++ header declarations.
 		//llvm::outs() << "Mapped virtual file " + virt + ".cpp\n";
 	}
 
-	auto mod = std::make_unique<llvm::Module>("resource", llvmCtxt);
+	// contains llvm::Module for the output and a set for uniquing resource IDs
+	RescompContext resCtxt("resources");
 
 	int returnCode = tool.run(newFrontendActionFactoryFromLambda([&] {
-		return new ResCompFrontendAction(ResSearchPath, *mod);
+		return new ResCompFrontendAction(ResSearchPath, resCtxt);
 	}).get());
 
-	llvm::verifyModule(*mod);
-
 	if (returnCode) return returnCode;
+
+	if (resCtxt.errorOccured()) {
+		llvm::errs() << "No output generated.\n";
+		return 1;
+	}
+
+	llvm::verifyModule(resCtxt.getModule());
 
 	try {
 		ObjOrLibPath output{OutputFilePath};
 		// objFile will have a randomized name in case we're generating static lib
 		OutputObjFile objFile{output};
 
-		generateObjectFile(*mod, objFile, MArch);
+		generateObjectFile(resCtxt.getModule(), objFile, MArch);
 		objFile.os().flush();
 
 		if (output.isLib()) {
