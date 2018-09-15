@@ -239,7 +239,7 @@ public:
 
 		// Retrieve resource path
 		auto initializer = decl->getInit();
-		if (!isa<CXXConstructExpr>(initializer)) {
+		if (!initializer || !isa<CXXConstructExpr>(initializer)) {
 			return true;
 		}
 		auto constructor = dyn_cast<CXXConstructExpr>(initializer);
