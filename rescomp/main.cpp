@@ -62,8 +62,8 @@ static llvm::LLVMContext llvmCtxt;
 
 class RescompContext {
 	std::unique_ptr<llvm::Module> pMod;
-	llvm::DenseSet<unsigned> resIDs;
-	bool error = false;
+	llvm::DenseMap<unsigned, SourceLocation> resMap;
+	//bool error = false;
 
 public:
 	RescompContext(StringRef moduleName) : pMod(new llvm::Module(moduleName, llvmCtxt)) {}
@@ -72,17 +72,17 @@ public:
 		return *pMod;
 	}
 
-	llvm::DenseSet<unsigned>& getResIDs() {
-		return resIDs;
+	llvm::DenseMap<unsigned, SourceLocation>& getResourceDefs() {
+		return resMap;
 	}
 
-	bool errorOccured() const {
+	/*bool errorOccured() const {
 		return error;
 	}
 
 	void setErrorFlag() {
 		error = true;
-	}
+	}*/
 };
 
 struct MangledStorageGlobals {
@@ -137,16 +137,22 @@ class CompileResourcesASTVisitor : public RecursiveASTVisitor<CompileResourcesAS
 	ArrayRef<StringRef> searchPath;
 	RescompContext& resCtxt;
 
-	bool constructStorageGlobals(uint64_t resourceID, const std::string& resourcePath) {
-		bool inserted;
-		std::tie(std::ignore, inserted) = resCtxt.getResIDs().insert(resourceID);
+	bool constructStorageGlobals(uint64_t resourceID, const std::string& resourcePath, SourceLocation location) {
+		//std::tie(std::ignore, inserted) = resCtxt.getResIDs().insert(resourceID);
+		auto& resDefs = resCtxt.getResourceDefs();
+		auto alreadyDefined = resDefs.find(resourceID);
 
-		if (!inserted) {
+		if (alreadyDefined != resDefs.end()) {
+			auto& diagEngine = astCtxt.getDiagnostics();
+			auto redefErrID = diagEngine.getCustomDiagID(DiagnosticsEngine::Error, "redefinition of Resource with the same ID");
+			diagEngine.Report(location, redefErrID);
 			// TODO: also show the location of previous definition
-			llvm::errs() << "Redefinition of Resource with the same ID: Resource<" << resourceID << ">.\n";
-			resCtxt.setErrorFlag();
+			auto firstDefinedHereID = diagEngine.getCustomDiagID(DiagnosticsEngine::Note, "previous definition is here");
+			diagEngine.Report(alreadyDefined->second, firstDefinedHereID);
+
 			return false;
 		}
+		resDefs.insert({resourceID, location});
 
 		std::string code;
 		llvm::raw_string_ostream codestream(code);
@@ -244,7 +250,7 @@ public:
 		std::string resourcePath = pathValue->getString();
 
 		//llvm::outs() << "Resource: ID = " << resourceID << ", PATH = \"" << resourcePath << "\"\n";
-		return constructStorageGlobals(resourceID, resourcePath);
+		return constructStorageGlobals(resourceID, resourcePath, decl->getLocation());
 	}
 };
 
@@ -263,7 +269,7 @@ public:
 };
 
 class ResCompFrontendAction : public ASTFrontendAction {
-	std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI, StringRef file) override {
+	std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance& CI, StringRef file) override {
 		SmallString<260> fname{file};
 		llvm::sys::path::remove_filename(fname);
 		inputDirectory = fname.str();
@@ -353,7 +359,7 @@ public:
 		// object file should have a unique name in case we're generating lib
 		// to make sure we don't overwrite any existing file
 		if (output.isLib()) {
-			errc = llvm::sys::fs::createUniqueFile(output.obj(), fd, actualPath, llvm::sys::fs::all_write);
+			errc = llvm::sys::fs::createUniqueFile(output.obj(), fd, actualPath);
 		}
 		else {
 			errc = llvm::sys::fs::openFileForWrite(output.obj(), fd, llvm::sys::fs::F_None);
@@ -433,11 +439,9 @@ or a static library based on C++ header declarations.
 		return new ResCompFrontendAction(ResSearchPath, resCtxt);
 	}).get());
 
-	if (returnCode) return returnCode;
-
-	if (resCtxt.errorOccured()) {
-		llvm::errs() << "No output generated.\n";
-		return 1;
+	if (returnCode) {
+		//llvm::errs() << "No output generated.\n";
+		return returnCode;
 	}
 
 	llvm::verifyModule(resCtxt.getModule());
