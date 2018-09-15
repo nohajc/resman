@@ -146,7 +146,7 @@ class CompileResourcesASTVisitor : public RecursiveASTVisitor<CompileResourcesAS
 			auto& diagEngine = astCtxt.getDiagnostics();
 			auto redefErrID = diagEngine.getCustomDiagID(DiagnosticsEngine::Error, "redefinition of Resource with the same ID");
 			diagEngine.Report(location, redefErrID);
-			// TODO: also show the location of previous definition
+
 			auto firstDefinedHereID = diagEngine.getCustomDiagID(DiagnosticsEngine::Note, "previous definition is here");
 			diagEngine.Report(alreadyDefined->second, firstDefinedHereID);
 
