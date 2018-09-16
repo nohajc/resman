@@ -422,6 +422,7 @@ or a static library based on C++ header declarations.
 )__");
 
 	ClangTool tool(op.getCompilations(), op.getSourcePathList());
+	tool.appendArgumentsAdjuster(op.getArgumentsAdjuster());
 
 	tool.appendArgumentsAdjuster(
 		[perFileCmdLine = createPerFileCmdLine(getProgDir(argv[0]))]
