@@ -270,6 +270,16 @@ public:
 
 class ResCompFrontendAction : public ASTFrontendAction {
 	std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance& CI, StringRef file) override {
+		// force C++ language even for .h files
+		auto& invocation = CI.getInvocation();
+		auto& langOpts = CI.getLangOpts();
+		langOpts.CPlusPlus = 1;
+		auto& triple = CI.getTarget().getTriple();
+		auto& ppOpts = CI.getPreprocessorOpts();
+		invocation.setLangDefaults(langOpts, InputKind::CXX, triple, ppOpts, LangStandard::lang_cxx17);
+		CI.createPreprocessor(TU_Module);
+		CI.createASTContext();
+
 		SmallString<260> fname{file};
 		llvm::sys::path::remove_filename(fname);
 		inputDirectory = fname.str();
@@ -399,38 +409,8 @@ R"__(Resource compiler
 Converts one ore more files into a linkable object file
 or a static library based on C++ header declarations.
 )__");
-	auto sourcePathList = op.getSourcePathList();
 
-	std::vector<std::pair<std::string, std::string>> virtualCpps;
-	try {
-		for (auto& srcPath : sourcePathList) {
-			StringRef srcPathRef(srcPath);
-			SmallString<260> fname{ srcPath };
-
-			if (srcPathRef.endswith_lower(".h") || srcPathRef.endswith_lower(".hpp")) {
-				// Do our own existence check for header files before trying to parse the virtual cpp
-				if (!llvm::sys::fs::exists(srcPath)) {
-					throw std::runtime_error("Input file " + srcPath + " does not exist.");
-				}
-
-				llvm::sys::path::replace_extension(fname, ".cpp");
-				std::string hdrName = llvm::sys::path::filename(srcPath);
-				virtualCpps.push_back({ getAbsolutePath(fname.str()), "#include \"" + hdrName + "\"" });
-				srcPath = fname.str();
-			}
-		}
-	}
-	catch (const std::exception& ex) {
-		llvm::errs() << "Error: " << ex.what() << '\n';
-		return 1;
-	}
-
-	ClangTool tool(op.getCompilations(), sourcePathList);
-
-	for (const auto& virt : virtualCpps) {
-		tool.mapVirtualFile(virt.first, virt.second);
-		//llvm::outs() << "Mapped virtual file " + virt + ".cpp\n";
-	}
+	ClangTool tool(op.getCompilations(), op.getSourcePathList());
 
 	// contains llvm::Module for the output and a set for uniquing resource IDs
 	RescompContext resCtxt("resources");
