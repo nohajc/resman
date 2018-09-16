@@ -274,6 +274,9 @@ class ResCompFrontendAction : public ASTFrontendAction {
 		auto& invocation = CI.getInvocation();
 		auto& langOpts = CI.getLangOpts();
 		langOpts.CPlusPlus = 1;
+		langOpts.CXXExceptions = 1;
+		langOpts.RTTI = 1;
+
 		auto& triple = CI.getTarget().getTriple();
 		auto& ppOpts = CI.getPreprocessorOpts();
 		invocation.setLangDefaults(langOpts, InputKind::CXX, triple, ppOpts, LangStandard::lang_cxx17);
