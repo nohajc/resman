@@ -173,6 +173,7 @@ private:
 				addDataToModule(data, glob.storageBegin, glob.storageSize, resCtxt.getModule(), llvmCtxt);
 			}
 			catch (const std::exception& ex) {
+				// TODO: do not generate output if resource not found
 				llvm::errs() << "Error: " << ex.what() << '\n';
 			}
 		}
