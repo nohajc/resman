@@ -17,7 +17,9 @@
 #include <iostream>
 #include <utility>
 #include <string>
+#include <algorithm>
 
+#include "../common/fsutil.h"
 #include "../common/fileio.h"
 #include "../common/objcompiler.h"
 #include "../common/libpacker.h"
@@ -53,9 +55,10 @@ static llvm::cl::list<std::string> ResSearchPath("R",
 	llvm::cl::value_desc("directory"),
 	llvm::cl::cat(ToolingResCompCategory));
 
-// TODO: include search path (we must be able to locate Resource.h)
-// program directory path could be included implicitly or we could even
-// pack the header as a resource and map it as a virtual file (nice bootstrapping)
+static llvm::cl::list<std::string> HdrSearchPath("I",
+	llvm::cl::desc("Include search path (can be used more than once for multiple paths)"),
+	llvm::cl::value_desc("directory"),
+	llvm::cl::cat(ToolingResCompCategory));
 
 
 static llvm::LLVMContext llvmCtxt;
@@ -63,7 +66,6 @@ static llvm::LLVMContext llvmCtxt;
 class RescompContext {
 	std::unique_ptr<llvm::Module> pMod;
 	llvm::DenseMap<unsigned, SourceLocation> resMap;
-	//bool error = false;
 
 public:
 	RescompContext(StringRef moduleName) : pMod(new llvm::Module(moduleName, llvmCtxt)) {}
@@ -75,14 +77,6 @@ public:
 	llvm::DenseMap<unsigned, SourceLocation>& getResourceDefs() {
 		return resMap;
 	}
-
-	/*bool errorOccured() const {
-		return error;
-	}
-
-	void setErrorFlag() {
-		error = true;
-	}*/
 };
 
 struct MangledStorageGlobals {
@@ -138,7 +132,6 @@ class CompileResourcesASTVisitor : public RecursiveASTVisitor<CompileResourcesAS
 	RescompContext& resCtxt;
 
 	bool constructStorageGlobals(uint64_t resourceID, const std::string& resourcePath, SourceLocation location) {
-		//std::tie(std::ignore, inserted) = resCtxt.getResIDs().insert(resourceID);
 		auto& resDefs = resCtxt.getResourceDefs();
 		auto alreadyDefined = resDefs.find(resourceID);
 
@@ -175,7 +168,6 @@ private:
 			MangleStorageNamesASTVisitor resCompVisitor(resourceID, resourcePath, glob);
 			resCompVisitor.TraverseDecl(ast->getASTContext().getTranslationUnitDecl());
 
-			//llvm::outs() << "begin: " << glob.storageBegin << ", size: " << glob.storageSize << '\n';
 			try {
 				auto data = readFileIntoMemory(resourcePath, searchPath);
 				addDataToModule(data, glob.storageBegin, glob.storageSize, resCtxt.getModule(), llvmCtxt);
@@ -283,10 +275,7 @@ class ResCompFrontendAction : public ASTFrontendAction {
 		CI.createPreprocessor(TU_Module);
 		CI.createASTContext();
 
-		SmallString<260> fname{file};
-		llvm::sys::path::remove_filename(fname);
-		inputDirectory = fname.str();
-
+		inputDirectory = removeFilename(file);
 		resSearchPath.back() = inputDirectory;
 		return std::make_unique<ResCompASTConsumer>(resSearchPath, resCtxt);
 	}
@@ -395,12 +384,31 @@ public:
 		: OpenOutputObjFile(output), llvm::ToolOutputFile(actualPath, fd) {}
 };
 
+// Construct command-line options for each parsed file
+static CommandLineArguments createPerFileCmdLine(StringRef progDir) {
+	CommandLineArguments result;
+	// Include search path will contain program directory by default
+	result.insert(result.end(), {"-I", progDir});
+	//llvm::outs() << "progDir: " << progDir << '\n';
+
+	for (const auto& p : HdrSearchPath) {
+		// and also any additional paths provided by user
+		result.insert(result.end(), {"-I", p});
+	}
+	return result;
+}
+
+std::string getProgDir(const char* argv0) {
+	return removeFilename(llvm::sys::fs::getMainExecutable(argv0, (void*)(intptr_t)getProgDir));
+}
+
 int main(int argc, const char *argv[]) {
 	using namespace std::string_literals;
 
 	std::vector<const char*> args(argv, argv + argc);
 	int argCnt = argc;
-	if (args[argc - 1] != "--"s) {
+	auto it = std::find(args.cbegin(), args.cend(), "--"s);
+	if (it == args.cend()) {
 		// We don't want to work with compilation databases.
 		// If the `--` option wasn't specified, pretend it was.
 		args.push_back("--");
@@ -414,6 +422,15 @@ or a static library based on C++ header declarations.
 )__");
 
 	ClangTool tool(op.getCompilations(), op.getSourcePathList());
+
+	tool.appendArgumentsAdjuster(
+		[perFileCmdLine = createPerFileCmdLine(getProgDir(argv[0]))]
+		(const CommandLineArguments& cmdArgs, StringRef) {
+			CommandLineArguments result(cmdArgs);
+			result.insert(result.end(), perFileCmdLine.cbegin(), perFileCmdLine.cend());
+			return result;
+		}
+	);
 
 	// contains llvm::Module for the output and a set for uniquing resource IDs
 	RescompContext resCtxt("resources");
