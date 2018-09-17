@@ -13,8 +13,7 @@ void packIntoLib(const std::string& ifname, const std::string& ofname) {
 	auto baseifname = sys::path::filename(ifname);
 	auto memberOrErr = NewArchiveMember::getFile(baseifname, true);
 	if (!memberOrErr) {
-		// TODO: custom exception that can capture llvm::Error and log it in the catch clause
-		// logAllUnhandledErrors(std::move(memberOrErr.takeError()), llvm::errs(), "File IO error: ");
+		// TODO: use llvm error handling instead of exceptions
 		throw std::runtime_error("Could not open generated objectfile.");
 	}
 

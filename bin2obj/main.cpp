@@ -75,7 +75,8 @@ int main(int argc, char *argv[]) {
 		Module mod("resource", ctxt);
 
 		auto data = readFileIntoMemory(args.ifname);
-		addDataToModule(data, args.varname, args.varname + "_size", mod, ctxt);
+		if (!data) throw std::runtime_error("Cannot open file: " + args.ifname);
+		addDataToModule(*data, args.varname, args.varname + "_size", mod, ctxt);
 		verifyModule(mod);
 
 		generateObjectFile(mod, args.objname, args.arch);

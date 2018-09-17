@@ -3,32 +3,17 @@
 #include <fstream>
 #include <utility>
 #include <llvm/Support/FileSystem.h>
-#include <llvm/ADT/ScopeExit.h>
+#include <llvm/Support/MemoryBuffer.h>
 
 using namespace llvm;
 
-static bool readFileInto(const std::string& ifname, std::vector<char>& contents) {
-	std::ifstream in(ifname, std::ios::binary);
-	if (!in.is_open()) {
-		return false;
+Expected<std::vector<char>> readFileIntoMemory(const std::string& ifname, const std::vector<StringRef>& searchPath) {
+	auto errorOrMemBuf = MemoryBuffer::getFile(ifname, -1, false); // is the file in the current directory?
+	if (errorOrMemBuf) {
+		auto& memBuf = *errorOrMemBuf;
+		return std::vector<char>{ memBuf->getBufferStart(), memBuf->getBufferEnd() };
 	}
-
-	in.seekg(0, std::ios::end);
-	size_t fsize = in.tellg();
-
-	contents.resize(fsize);
-	in.seekg(0, std::ios::beg);
-	in.read(contents.data(), fsize);
-
-	return true;
-}
-
-std::vector<char> readFileIntoMemory(const std::string& ifname, const std::vector<StringRef>& searchPath) {
-	std::vector<char> contents;
-
-	if (readFileInto(ifname, contents)) { // is the file in the current directory?
-		return contents;
-	}
+	std::error_code lastError = errorOrMemBuf.getError();
 
 	StashCWD restoreCwdOnScopeExit;
 
@@ -36,10 +21,14 @@ std::vector<char> readFileIntoMemory(const std::string& ifname, const std::vecto
 		//llvm::outs() << "Searching input in " << dir << "\n";
 		sys::fs::set_current_path(dir);
 
-		if (!readFileInto(ifname, contents)) {
+		auto errorOrMemBuf = MemoryBuffer::getFile(ifname, -1, false);
+		if (!errorOrMemBuf) {
+			lastError = errorOrMemBuf.getError();
 			continue;
 		}
-		return contents;
+		auto& memBuf = *errorOrMemBuf;
+		return std::vector<char>{ memBuf->getBufferStart(), memBuf->getBufferEnd() };
 	}
-	throw std::runtime_error("Cannot find input file " + ifname + '.');
+
+	return errorCodeToError(lastError);
 }

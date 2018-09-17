@@ -12,6 +12,7 @@
 #include <llvm/IR/Verifier.h>
 #include <llvm/Support/Path.h>
 #include <llvm/Support/FileSystem.h>
+#include <llvm/Support/Error.h>
 #include <llvm/ADT/DenseSet.h>
 
 #include <iostream>
@@ -131,19 +132,31 @@ class CompileResourcesASTVisitor : public RecursiveASTVisitor<CompileResourcesAS
 	ArrayRef<StringRef> searchPath;
 	RescompContext& resCtxt;
 
+	struct CustomErrors {
+		unsigned resourceRedefined;
+		unsigned firstDefinedHere;
+		unsigned cannotOpenResource;
+
+		CustomErrors(DiagnosticsEngine& diagEngine)
+			: resourceRedefined(diagEngine.getCustomDiagID(
+				DiagnosticsEngine::Error, "redefinition of Resource with the same ID"))
+			, firstDefinedHere(diagEngine.getCustomDiagID(
+				DiagnosticsEngine::Note, "previous definition is here"))
+			, cannotOpenResource(diagEngine.getCustomDiagID(
+				DiagnosticsEngine::Error, "Could not open resource file \"%0\": %1"))
+		{}
+	} customErrors;
+
 	bool constructStorageGlobals(uint64_t resourceID, const std::string& resourcePath, SourceLocation location) {
 		auto& resDefs = resCtxt.getResourceDefs();
 		auto alreadyDefined = resDefs.find(resourceID);
 
 		if (alreadyDefined != resDefs.end()) {
 			auto& diagEngine = astCtxt.getDiagnostics();
-			auto redefErrID = diagEngine.getCustomDiagID(DiagnosticsEngine::Error, "redefinition of Resource with the same ID");
-			diagEngine.Report(location, redefErrID);
+			diagEngine.Report(location, customErrors.resourceRedefined);
+			diagEngine.Report(alreadyDefined->second, customErrors.firstDefinedHere);
 
-			auto firstDefinedHereID = diagEngine.getCustomDiagID(DiagnosticsEngine::Note, "previous definition is here");
-			diagEngine.Report(alreadyDefined->second, firstDefinedHereID);
-
-			return false;
+			return true;
 		}
 		resDefs.insert({resourceID, location});
 
@@ -168,14 +181,18 @@ private:
 			MangleStorageNamesASTVisitor resCompVisitor(resourceID, resourcePath, glob);
 			resCompVisitor.TraverseDecl(ast->getASTContext().getTranslationUnitDecl());
 
-			try {
-				auto data = readFileIntoMemory(resourcePath, searchPath);
-				addDataToModule(data, glob.storageBegin, glob.storageSize, resCtxt.getModule(), llvmCtxt);
+			auto expectedData = readFileIntoMemory(resourcePath, searchPath);
+			if (auto err = expectedData.takeError()) {
+				llvm::handleAllErrors(std::move(err), [&](const llvm::ECError& ecErr) {
+					auto& diagEngine = astCtxt.getDiagnostics();
+					auto diagBuilder = diagEngine.Report(location, customErrors.cannotOpenResource);
+					diagBuilder.AddString(resourcePath);
+					diagBuilder.AddString(ecErr.message());
+				});
+				return true;
 			}
-			catch (const std::exception& ex) {
-				// TODO: do not generate output if resource not found
-				llvm::errs() << "Error: " << ex.what() << '\n';
-			}
+
+			addDataToModule(*expectedData, glob.storageBegin, glob.storageSize, resCtxt.getModule(), llvmCtxt);
 		}
 
 		return true;
@@ -200,7 +217,7 @@ private:
 
 public:
 	CompileResourcesASTVisitor(ASTContext& ctxt, ArrayRef<StringRef> paths, RescompContext& rctxt)
-		: astCtxt(ctxt), searchPath(paths), resCtxt(rctxt) {}
+		: astCtxt(ctxt), searchPath(paths), resCtxt(rctxt), customErrors(ctxt.getDiagnostics()) {}
 
 	bool VisitVarDecl(VarDecl* decl) {
 		if (!decl->isConstexpr()
