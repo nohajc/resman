@@ -9,14 +9,18 @@ find_package(LLVM REQUIRED CONFIG)
 include_directories(${LLVM_INCLUDE_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
 
+IF(DEFINED LINKING AND LINKING STREQUAL "static")
+	set(LINKER_EXTRA_FLAG "-static")
+ELSE()
+   set(LINKER_EXTRA_FLAG "")
+ENDIF()
+
 find_package(Clang QUIET)
 
 IF(APPLE OR Clang_FOUND)
 	link_directories("${CMAKE_PREFIX_PATH}/lib")
-	set(LINK_STATICALLY "")
 ELSE()
 	link_directories("/usr/lib/llvm-6.0/lib")
-	set(LINK_STATICALLY "-static")
 ENDIF()
 
 set(COMMON "../common")
@@ -51,5 +55,5 @@ IF(Clang_FOUND)
 
    target_link_libraries(rescomp LLVM ${CLANGTOOL_LIBS})
 ELSE()
-   target_link_libraries(rescomp ${CLANGTOOL_LIBS} ${LLVM_LIBS} ${LINK_STATICALLY})
+   target_link_libraries(rescomp ${CLANGTOOL_LIBS} ${LLVM_LIBS} ${LINKER_EXTRA_FLAG})
 ENDIF()
