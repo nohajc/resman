@@ -14,7 +14,6 @@ void packIntoLib(const std::string& ifname, const std::string& ofname) {
 	auto baseifname = sys::path::filename(ifname);
 	auto memberOrErr = NewArchiveMember::getFile(baseifname, true);
 	if (auto err = memberOrErr.takeError()) {
-		// TODO: use llvm error handling instead of exceptions
 		throw llvm_error(std::move(err), "Could not open generated objectfile: ");
 	}
 
