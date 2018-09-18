@@ -1,4 +1,5 @@
 #include "objcompiler.h"
+#include "exceptions.h"
 
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/Type.h>
@@ -91,7 +92,7 @@ void generateObjectFile(Module& mod, const std::string& objFilename, const std::
 	std::error_code errc;
 	llvm::ToolOutputFile objFile(objFilename, errc, llvm::sys::fs::F_None);
 	if (errc) {
-		throw std::runtime_error("Cannot open output file.");
+		throw llvm_ec_error(errc, "Cannot open output file: ");
 	}
 	generateObjectFile(mod, objFile, mArch);
 	objFile.keep();
@@ -138,7 +139,7 @@ void generateObjectFile(Module& mod, ToolOutputFile& objFile, const std::string&
 	const Target *theTarget = TargetRegistry::lookupTarget(mArch, theTriple, error);
 
 	if (!theTarget) {
-		throw std::runtime_error(error);
+		throw llvm_string_error(error, "Compiler target not found: ");
 	}
 
 	std::string CPUStr = sys::getHostCPUName(), FeaturesStr = getFeaturesStr();
@@ -167,7 +168,7 @@ void generateObjectFile(Module& mod, ToolOutputFile& objFile, const std::string&
 		MachineModuleInfo *MMI = new MachineModuleInfo(&LLVMTM);
 
 		if (target->addPassesToEmitFile(PM, *OS, fileType, false, MMI)) {
-			throw std::runtime_error("Incompatible target and file type.");
+			throw llvm_string_error("Incompatible target and file type.");
 		}
 
 		PM.run(mod);
@@ -175,7 +176,7 @@ void generateObjectFile(Module& mod, ToolOutputFile& objFile, const std::string&
 		auto pHasError =
 			((const LLCDiagnosticHandler *)(ctxt.getDiagHandlerPtr()))->HasError;
 		if (*pHasError) {
-			throw std::runtime_error("Fatal error.");
+			throw llvm_string_error("Fatal error.");
 		}
 
 		if (BOS) {

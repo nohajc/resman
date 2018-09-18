@@ -24,6 +24,7 @@
 #include "../common/fileio.h"
 #include "../common/objcompiler.h"
 #include "../common/libpacker.h"
+#include "../common/exceptions.h"
 
 using namespace clang;
 using namespace clang::driver;
@@ -335,7 +336,7 @@ class ObjOrLibPath {
 		if (path.endswith(libext)) {
 			return Type::Lib;
 		}
-		throw std::runtime_error("Output must be an object file or a static library.");
+		throw filetype_error("Output must be object file or static library.");
 	}
 
 public:
@@ -387,7 +388,7 @@ public:
 		}
 
 		if (errc) {
-			throw std::runtime_error("Cannot open output file.");
+			throw llvm_ec_error(errc, "Cannot open output file: ");
 		}
 	}
 
@@ -481,6 +482,10 @@ or a static library based on C++ header declarations.
 		else { // On the other hand, if object file was specified, we do want to keep it.
 			objFile.keep();
 		}
+	}
+	catch (llvm_error& ex) {
+		llvm::logAllUnhandledErrors(std::move(ex.error()), llvm::errs(), ex.msg_prefix());
+		return 1;
 	}
 	catch (const std::exception& ex) {
 		llvm::errs() << "Error: " << ex.what() << '\n';
