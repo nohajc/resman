@@ -3,11 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.26730.12
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "bin2obj", "bin2obj\bin2obj.vcxproj", "{277D291E-1547-4144-8B7D-C21370BBBF01}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test", "test\test.vcxproj", "{7400FC83-029A-4D88-A745-7F76EEB22BD8}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "resman_api", "res_manager\res_manager.vcxproj", "{A58C19F3-FB1A-4566-908F-CA3FEB1B1321}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "examples", "examples\examples.vcxproj", "{A58C19F3-FB1A-4566-908F-CA3FEB1B1321}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "rescomp", "rescomp\rescomp.vcxproj", "{41634A2F-FC88-4615-952B-D37ECCE277C3}"
 EndProject
