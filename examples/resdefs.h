@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Resource.h"
+#include "../include/resman.h"
 
 namespace resman {
 	constexpr Resource<427> gResFoo("foo.txt");

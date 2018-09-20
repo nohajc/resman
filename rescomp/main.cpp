@@ -452,7 +452,8 @@ or a static library based on C++ header declarations.
 		}
 	);
 
-	// contains llvm::Module for the output and a set for uniquing resource IDs
+	// contains llvm::Module for the output
+	// and a map of resource IDs to source location
 	RescompContext resCtxt("resources");
 
 	int returnCode = tool.run(newFrontendActionFactoryFromLambda([&] {

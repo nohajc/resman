@@ -1,4 +1,4 @@
-#include "test.h"
+#include "resdefs.h"
 
 #include <iostream>
 #include <string>
