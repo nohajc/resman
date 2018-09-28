@@ -15,7 +15,7 @@ ELSE()
    set(LINKER_EXTRA_FLAG "")
 ENDIF()
 
-find_package(Clang QUIET)
+find_package(Clang 6 QUIET)
 
 IF(APPLE OR Clang_FOUND)
 	link_directories("${CMAKE_PREFIX_PATH}/lib")
