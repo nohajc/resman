@@ -1,14 +1,16 @@
 sudo: true
 
+osx_image: xcode10
 dist: trusty
 
 os:
+  - osx
   - linux
 
 language: cpp
 
 install:
-  - build_scripts/linux/travis_install.sh
+  - build_scripts/${TRAVIS_OS_NAME}/travis_install.sh
 
 script:
-  - build_scripts/linux/travis_script.sh
+  - build_scripts/${TRAVIS_OS_NAME}/travis_script.sh
