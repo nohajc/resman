@@ -7,18 +7,8 @@ os:
 
 language: cpp
 
-before_install:
+install:
   - build_scripts/linux/travis_install.sh
-
-addons:
-  apt:
-    packages:
-      - zlib1g-dev
-      - cmake3
-      - gcc-8
-      - g++-8
-      - llvm-6.0-dev
-      - libclang-6.0-dev
 
 script:
   - build_scripts/linux/travis_script.sh

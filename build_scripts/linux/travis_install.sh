@@ -10,3 +10,5 @@ sudo apt update
 sudo apt install software-properties-common -y
 sudo add-apt-repository -y ppa:george-edison55/cmake-3.x
 sudo apt update
+
+sudo apt install zlib1g-dev cmake3 gcc-8 g++-8 llvm-6.0-dev libclang-6.0-dev -y
