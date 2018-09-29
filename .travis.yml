@@ -1,4 +1,7 @@
-sudo: true
+sudo: required
+
+services:
+  - docker
 
 osx_image: xcode10
 dist: trusty
