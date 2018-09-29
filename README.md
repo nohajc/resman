@@ -29,7 +29,7 @@ However, with the help of LLVM and Clang, we can do better.
 
 ### What resman does differently
 
-This project consist of a resource compiler __rescomp__ and a header file __include/resman.h__.
+This project consists of a resource compiler __rescomp__ and a header file __include/resman.h__.
 
 Instead of converting your files into C/C++ byte arrays, you just declare
 which files you want to embed like this:
