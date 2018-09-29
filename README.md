@@ -16,9 +16,9 @@ This is a cross-platform solution for embedding resource files into executables.
 * Unversal solution for all common platforms
 * No runtime dependencies
 
-Existing approaches to this problem include
+#### Existing approaches to this problem include
 * Using Windows resource management (only available for Windows PE files)
-* Converting your file into C/C++ byte array which can be compiled (this can produce very large source files)
+* Converting your files into C/C++ byte arrays which can be compiled (this can produce very large source files)
 * Using utilities like objcopy (quite low-level, Linux-only AFAIK)
 * Using the Qt Resource System (adds runtime dependency on Qt)
 
