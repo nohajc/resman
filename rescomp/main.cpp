@@ -104,7 +104,7 @@ public:
 		}
 
 		std::string mangledVarName;
-		auto mangleCtxt = decl->getASTContext().createMangleContext();
+		std::unique_ptr<MangleContext> mangleCtxt{decl->getASTContext().createMangleContext()};
 
 		if (!mangleCtxt->shouldMangleDeclName(decl)) {
 			return true;
@@ -123,7 +123,6 @@ public:
 			mangledGlob.storageSize = mangledVarName;
 		}
 
-		delete mangleCtxt;
 		return true;
 	}
 };
@@ -179,8 +178,8 @@ private:
 		auto ast = buildASTFromCode(codestream.str());
 		if (ast) {
 			MangledStorageGlobals glob;
-			MangleStorageNamesASTVisitor resCompVisitor(resourceID, resourcePath, glob);
-			resCompVisitor.TraverseDecl(ast->getASTContext().getTranslationUnitDecl());
+			MangleStorageNamesASTVisitor mangleNamesVisitor(resourceID, resourcePath, glob);
+			mangleNamesVisitor.TraverseDecl(ast->getASTContext().getTranslationUnitDecl());
 
 			auto expectedData = readFileIntoMemory(resourcePath, searchPath);
 			if (auto err = expectedData.takeError()) {
