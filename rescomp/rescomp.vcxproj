@@ -22,7 +22,6 @@
     <VCProjectVersion>15.0</VCProjectVersion>
     <ProjectGuid>{41634A2F-FC88-4615-952B-D37ECCE277C3}</ProjectGuid>
     <RootNamespace>rescomp</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.17134.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -70,6 +69,14 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup />
+  <ItemDefinitionGroup Condition="'$(APPVEYOR)'=='True'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(ProjectDir)deps\llvm-clang-6.0-libs\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <AdditionalOptions>"$(ProjectDir)deps\llvm-clang-6.0-libs\lib\*.lib" %(AdditionalOptions)</AdditionalOptions>
+    </Link>
+  </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
@@ -78,8 +85,8 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>c:\libs\llvm-6.0.0.src\include\;c:\libs\llvm-6.0.0.src\build\include\;C:\libs\llvm-6.0.0.src\tools\clang\include\;C:\libs\llvm-6.0.0.src\build\tools\clang\include\</AdditionalIncludeDirectories>
-      <AdditionalOptions>/wd4146</AdditionalOptions>
+      <AdditionalIncludeDirectories>c:\libs\llvm-6.0.0.src\include\;c:\libs\llvm-6.0.0.src\build\include\;C:\libs\llvm-6.0.0.src\tools\clang\include\;C:\libs\llvm-6.0.0.src\build\tools\clang\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/wd4146 /wd4996</AdditionalOptions>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -95,7 +102,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalOptions>/wd4146</AdditionalOptions>
+      <AdditionalOptions>/wd4146 /wd4996</AdditionalOptions>
     </ClCompile>
     <Link>
       <AdditionalDependencies>version.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -107,7 +114,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalOptions>/wd4146</AdditionalOptions>
+      <AdditionalOptions>/wd4146 /wd4996</AdditionalOptions>
     </ClCompile>
     <Link>
       <AdditionalDependencies>version.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -121,7 +128,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalOptions>/wd4146</AdditionalOptions>
+      <AdditionalOptions>/wd4146 /wd4996</AdditionalOptions>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
