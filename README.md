@@ -1,6 +1,6 @@
 # resman
 
-Resource compiler and manager based on llvm/clang
+Cross-platform resource compiler and manager based on llvm/clang
 
 | Linux | macOS | Windows |
 | ----- | ----- | ------- |
