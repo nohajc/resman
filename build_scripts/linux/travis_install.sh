@@ -8,6 +8,6 @@ sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys AF4F7421
 sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys BA9EF27F
 sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 828AB726
 
-sudo apt update
+sudo apt update -qq
 
 sudo apt install zlib1g-dev cmake3 gcc-8 g++-8 llvm-6.0-dev libclang-6.0-dev -y

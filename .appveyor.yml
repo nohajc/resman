@@ -1,0 +1,14 @@
+version: 1.0.{build}
+
+image: Visual Studio 2017
+
+install:
+  - ps: cd %TEMP%
+  - ps: curl https://github.com/nohajc/llvm-clang-static-libs-prebuilt/releases/download/v6.0.1/llvm-clang-6.0-libs-win-x64.7z
+  - ps: 7z e llvm-clang-6.0-libs-win-x64.7z
+
+platform: x64
+configuration: Release
+
+build:
+  project: rescomp/rescomp.vcxproj
