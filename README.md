@@ -47,9 +47,9 @@ constexpr resman::Resource<3> gRes3("resource_file3.mp3"); // resource with ID 3
 // IDs can be arbitrary but they should be unique across all translation units in your project
 ...
 ```
-This header will be used to access the resources from your application code.
+This header will be used to access the resources from your application code. If you include it and compile your project now, you will get a linker error because the resources were just declared.
 
-To actually embed all the files, run __rescomp__:
+To actually embed all the files, run __rescomp__ on the same header file:
 ```sh
 $ rescomp resource_list.h -o resource_bundle.o [-R resource_search_path] [-I resman_include_path]
 ```
@@ -74,6 +74,13 @@ unsigned size = handle.size();
 unsigned id = handle.id();
 
 ```
+
+Make sure the linker can find __rescomp__'s output and your project should build now.
+
+#### So, to summarise
+Instead of generating byte arrays, you just write a header file with the list of resources.
+Then you run the resource compiler to generate object files or static libraries directly from that list.
+That same list will also be be used to access your embedded resources.
 
 ## More information
 _TODO_
