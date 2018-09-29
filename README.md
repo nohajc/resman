@@ -13,7 +13,7 @@ This is a cross-platform solution for embedding resource files into executables.
 ### Goals
 * No boilerplate
 * Efficient intermediate representation
-* Unversal solution for all common platforms
+* Universal solution for all common platforms
 * No runtime dependencies
 
 #### Existing approaches to this problem include
@@ -24,6 +24,8 @@ This is a cross-platform solution for embedding resource files into executables.
 
 As you can see, none of the above can fulfill all the goals.
 However, with the help of LLVM and Clang, we can do better.
+
+---------
 
 <sup><a name="footnote1">1</a></sup> Note that we're talking about embedding during linking phase. This tool is not able to modify existing executables.
 
