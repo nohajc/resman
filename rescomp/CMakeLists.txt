@@ -59,3 +59,19 @@ IF(Clang_FOUND)
 ELSE()
    target_link_libraries(rescomp ${CLANGTOOL_LIBS} ${LLVM_LIBS} ${LINKER_EXTRA_FLAG})
 ENDIF()
+
+set(PKG_ARCH "amd64") # TODO: add option to override this
+
+IF(DEFINED ENV{TRAVIS_OS_NAME})
+   set(PKG_OS_NAME $ENV{TRAVIS_OS_NAME})
+ELSE()
+   set(PKG_OS_NAME "linux")
+ENDIF()
+
+add_custom_target(package
+   COMMAND ${CMAKE_COMMAND} -E make_directory dist
+	COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/../include/resman.h dist
+	COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:rescomp> dist
+	COMMAND ${CMAKE_COMMAND} -E tar cvJf "resman-${PKG_OS_NAME}-${PKG_ARCH}.tar.xz" dist/*
+	COMMAND ${CMAKE_COMMAND} -E remove dist/*
+	COMMAND ${CMAKE_COMMAND} -E remove_directory dist)
