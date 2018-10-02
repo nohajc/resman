@@ -34,9 +34,9 @@ set(SOURCE_FILES
 add_executable(rescomp ${SOURCE_FILES})
 
 IF(APPLE)
-   set(STRIP_CMD "strip")
+   set(STRIP_CMD strip)
 ELSE()
-   set(STRIP_CMD "strip -s")
+   set(STRIP_CMD strip -s)
 ENDIF()
 
 IF(CMAKE_BUILD_TYPE STREQUAL "Release")
