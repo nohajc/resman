@@ -1,11 +1,9 @@
 cmake_minimum_required(VERSION 3.0)
 project(rescomp)
 
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -s -fvisibility-inlines-hidden")
-
 set(CMAKE_CXX_STANDARD 17)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti -fvisibility-inlines-hidden")
 
 find_package(LLVM 6 REQUIRED CONFIG)
 include_directories(${LLVM_INCLUDE_DIRS})
@@ -34,6 +32,10 @@ set(SOURCE_FILES
 	${COMMON}/fileio.cpp ${COMMON}/fileio.h)
 
 add_executable(rescomp ${SOURCE_FILES})
+
+IF(CMAKE_BUILD_TYPE STREQUAL "Release")
+   add_custom_command(TARGET rescomp POST_BUILD COMMAND strip -s $<TARGET_FILE:rescomp>)
+ENDIF()
 
 llvm_map_components_to_libnames(LLVM_LIBS core support codegen analysis asmprinter
 	x86asmparser x86asmprinter x86codegen x86desc x86info x86utils vectorize option)
