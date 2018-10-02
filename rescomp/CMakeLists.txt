@@ -33,8 +33,14 @@ set(SOURCE_FILES
 
 add_executable(rescomp ${SOURCE_FILES})
 
+IF(APPLE)
+   set(STRIP_CMD "strip")
+ELSE()
+   set(STRIP_CMD "strip -s")
+ENDIF()
+
 IF(CMAKE_BUILD_TYPE STREQUAL "Release")
-   add_custom_command(TARGET rescomp POST_BUILD COMMAND strip -s $<TARGET_FILE:rescomp>)
+   add_custom_command(TARGET rescomp POST_BUILD COMMAND ${STRIP_CMD} $<TARGET_FILE:rescomp>)
 ENDIF()
 
 llvm_map_components_to_libnames(LLVM_LIBS core support codegen analysis asmprinter
