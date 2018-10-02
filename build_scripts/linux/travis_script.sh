@@ -9,4 +9,4 @@ if [ -n "$TRAVIS_TAG" ]; then
    DOCKER_COMMAND="$DOCKER_COMMAND && make package"
 fi
 
-docker run --rm -v $PWD:/home/dev/resman -it nohajc/void-llvm-clang-dev /bin/bash -c "$DOCKER_COMMAND"
+docker run --rm -v $PWD:/home/dev/resman -it "nohajc/void-llvm-clang-dev:v6.0.1" /bin/bash -c "$DOCKER_COMMAND"
