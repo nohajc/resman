@@ -18,7 +18,6 @@ build:
 after_build:
   - ps: |
     $appveyor_repo_tag = $env:APPVEYOR_REPO_TAG
-
     if ($appveyor_repo_tag -eq "true") {
       7z a resman-win-amd64.zip %APPVEYOR_BUILD_FOLDER%\rescomp\x64\Release\rescomp.exe include\resman.h
     }
