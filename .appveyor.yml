@@ -16,7 +16,7 @@ build:
   project: rescomp/rescomp.vcxproj
 
 after_build:
-  - ps: if ($env:APPVEYOR_REPO_TAG -eq "true") { 7z a resman-win-amd64.zip %APPVEYOR_BUILD_FOLDER%\rescomp\x64\Release\rescomp.exe include\resman.h }
+  - ps: if ($env:APPVEYOR_REPO_TAG -eq "true") { 7z a resman-win-amd64.zip $env:APPVEYOR_BUILD_FOLDER\rescomp\x64\Release\rescomp.exe include\resman.h }
 
 artifacts:
   - path: resman-win-amd64.zip
