@@ -17,14 +17,10 @@ build:
 
 after_build:
   - 7z a resman-win-amd64.zip %APPVEYOR_BUILD_FOLDER%\rescomp\x64\Release\rescomp.exe include\resman.h
-    on:
-	   appveyor_repo_tag: true
 
 artifacts:
   - path: resman-win-amd64.zip
     name: resman-win-amd64
-	 on:
-	   appveyor_repo_tag: true
 
 deploy:
   description: ''
