@@ -8,6 +8,7 @@ install:
   - ps: cd deps
   - curl -L https://github.com/nohajc/llvm-clang-static-libs-prebuilt/releases/download/v6.0.1/llvm-clang-6.0-libs-win-x64.7z -o llvm-clang-6.0-libs-win-x64.7z
   - 7z x llvm-clang-6.0-libs-win-x64.7z -aoa
+  - ps: cd ..\..
 
 platform: x64
 configuration: Release
