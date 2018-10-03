@@ -19,7 +19,7 @@ after_build:
   - 7z a resman-win-amd64.zip %APPVEYOR_BUILD_FOLDER%\rescomp\x64\Release\rescomp.exe %APPVEYOR_BUILD_FOLDER%\include\resman.h
 
 artifacts:
-  - path: resman-win-amd64.zip
+  - path: "resman-win-amd64.zip"
     name: resman-win-amd64
 
 deploy:
