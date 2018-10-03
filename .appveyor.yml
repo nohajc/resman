@@ -14,3 +14,25 @@ configuration: Release
 
 build:
   project: rescomp/rescomp.vcxproj
+
+after_build:
+  - ps: |
+    $appveyor_repo_tag = $env:APPVEYOR_REPO_TAG
+
+    if ($appveyor_repo_tag -eq "true") {
+      7z a resman-win-amd64.zip %APPVEYOR_BUILD_FOLDER%\rescomp\x64\Release\rescomp.exe include\resman.h
+    }
+
+artifacts:
+  - path: resman-win-amd64.zip
+    name: resman-win-amd64
+
+deploy:
+  description: ''
+  provider: GitHub
+  auth_token:
+    secure: quC+gWR49/hmtbQmiuQN8aRj9WURDUU8nTkL/ZxT24w9JQ5mHfI8g+/bRd/EWR1FvSBWRPpYtBFp9MoWUpLVSrCGKpH10QXCzjYbXVoZ48osgBuW9DxIXRDfeYUlVxkWqYC7SVyurrBskJkVJu1KJFL4TDzBLZBl3XahL78gWEBYgwONx21aGWv+AyD2DMfilj7GknsmO9K0FL6Mk+gWzV0kGBrXREkMfW6Qfsll8Ev0ovvGaddVbnHLeKczzXpJs5wG01lIzHDC8LBj22+/S5oEAxgbTHGbzu4w3qpmy8Ucn3tUXQhWVyV0VtoWBY8d4VCn9y934e1JX5IxN6X4XDuiEgXi7hO13w28UbMLmUPv0VYapejnC3iPvkjUXpbhpW/QXcRvhEtLaofU6Ls9ctBTRGzscf7sUtXp/7bfif0+/fCi0UNbH4IR3uOBRIhNU/qOpy3M5T+r0f/jN7B+IXPSaNHFgubeFHkG2Sdhgcgc8bCRTvX3zqTmzsu6czmCI8kEYj3++3kCNBdbple5I9mLjyTkPJqrrwlU37i1GzZM1q3Xtw+4O9Hz0IqL90/PUNFvSBeeVHqd2cLXZrfgBKJ2xMv8j6jnOLJIa7pxN09asZbaBqr+eqDujVmfROsa8XYeyHC5+nd+/Cy5P2kRr0HwOLMVcHeFLHsvDGjbQrk=
+  artifact: resman-win-amd64
+  on:
+    branch: master
+    appveyor_repo_tag: true
