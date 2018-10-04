@@ -19,7 +19,7 @@ script:
   - build_scripts/${TRAVIS_OS_NAME}/travis_script.sh
 
 after_script:
-  - build_script/travis_package.sh
+  - build_scripts/travis_package.sh
 
 deploy:
   provider: releases
