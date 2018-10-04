@@ -27,7 +27,7 @@ deploy:
   description: ''
   provider: GitHub
   auth_token:
-    secure: 1DCO8YjfqPzSYRgRmllpCPUYHQIKY+hZkIU0YRlVTnukjJTLWXxKwt9Gm2PnnC8x
+    secure: Jt5nGerAEIzy6Ghn8C5HVqXS1tAzrCQ46BJ5D2bjAiR6EE198sRLKVkfzSaTOsQk
     artifact: resman-win-amd64
   on:
     branch: master
