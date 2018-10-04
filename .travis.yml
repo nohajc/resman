@@ -18,7 +18,7 @@ install:
 script:
   - build_scripts/${TRAVIS_OS_NAME}/travis_script.sh
 
-after_script:
+after_success:
   - build_scripts/travis_package.sh
 
 deploy:
