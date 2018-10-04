@@ -28,5 +28,4 @@ deploy:
   file: resman-${TRAVIS_TAG}-${TRAVIS_OS_NAME}-amd64.tar.xz
   skip_cleanup: true
   on:
-    branch: master
     tags: true
