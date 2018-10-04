@@ -22,7 +22,8 @@ deploy:
   provider: releases
   api_key:
     secure: fKtL/GSGaCa6MjwrT10y0KIHneZA2eabiWj4cykxVPNJhIAmE/4rxc8tP8tVIuRwEkL7G2u1Su1aI8K1fo50hRN4zc9eDwkCPKggen+cEU0ETqOEqx4v3g4GBOSzQgJWlJiAZtwlrwG7W7rO+p9Rlg7W0ceYDSTSr6r5Bc/GQEiu8qlaJxrOEnOvfZMjzwnV4YIMB3HhNRVt+IUerFzQD/sfaA023wNcpCN9vuxx6sWaMbUij089lBvHITNfllDUaQmFVPO5q63V9vM62QASDNhmw3gW8Ww/tCfs6o7Ylo1f+/UnmMMM8ZC3ow0gCBnVDOVcwwDYE/8VYwi6gFoIRTBh0wZAsJtRTNGBJlfvHZqJE6depIjexe03piTJcq1emn4AdIWY2OoLl8iIkvvONxq10/yEZnhecD35A8Af3hTnGqSpU4BAmNdSlgLPsPP0Q/QE+8KqXFrm04/MS3vgt5I3CI7EH6xwJV2rHTL9S89e/mskP1fiQuFF8AWPWa8WjuOGs9jna7BZM0/5qbZfK8bq4BGGCy9uAg5JEWGZYRyUHvynLo/i1qtLwVOAmDN5l7h2c9ggwZSwnt+aq2vE7mNcEt/ZqNcnm/hFsFij5eng+Jo4qXEdaSuRftOTgb+omYYp2buyxoRDb3/JdaEObmjVl682OoSjmcwGs6doW28=
-  file: build/resman-${TRAVIS_OS_NAME}-amd64.tar.xz
+  file: build/resman-${TRAVIS_TAG}-${TRAVIS_OS_NAME}-amd64.tar.xz
   skip_cleanup: true
   on:
+    branch: master
     tags: true

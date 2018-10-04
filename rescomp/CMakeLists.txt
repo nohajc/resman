@@ -76,10 +76,16 @@ ELSE()
    set(PKG_OS_NAME "linux")
 ENDIF()
 
+IF(DEFINED ENV{TRAVIS_TAG})
+   set(PKG_VERSION $ENV{TRAVIS_TAG})
+ELSE()
+   set(PKG_VERSION "dev")
+ENDIF()
+
 add_custom_target(package
    COMMAND ${CMAKE_COMMAND} -E make_directory dist
 	COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/../include/resman.h dist
 	COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:rescomp> dist
-	COMMAND ${CMAKE_COMMAND} -E tar cvJf "resman-${PKG_OS_NAME}-${PKG_ARCH}.tar.xz" dist/*
+	COMMAND ${CMAKE_COMMAND} -E tar cvJf "resman-${PKG_VERSION}-${PKG_OS_NAME}-${PKG_ARCH}.tar.xz" dist/*
 	COMMAND ${CMAKE_COMMAND} -E remove dist/*
 	COMMAND ${CMAKE_COMMAND} -E remove_directory dist)
