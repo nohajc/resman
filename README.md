@@ -109,5 +109,25 @@ For an example project that uses CMake, see the _examples_ directory.
 
 Generally, any build system which supports custom targets can be used.
 
+## Installation
+Prebuilt executables for Windows/Linux/macOS are available in the release section. Just unpack anywhere and enjoy!
+
+The Linux binaries are linked statically so that they can run on any distribution.
+
+I used Void Linux with musl libc which supports true static linking [unlike glibc](https://www.musl-libc.org/intro.html).
+
+[Download latest release](https://github.com/nohajc/resman/releases/latest)
+
+## Building from source
+
+### Dependencies:
+* LLVM/Clang 6
+
+For __Linux__, there is a docker image prepared which has all the necessary dependencies installed. You can see how to invoke the build in _build_scripts/linux/travis_script.sh_.
+
+On __macOS__, you can download LLVM/Clang from the [official website](http://releases.llvm.org/download.html#6.0.1) and then invoke the build (see _build_scripts/osx/_).
+
+If you're building on __Windows__, there is a Visual Studio solution. LLVM/Clang prebuilt libraries are not available officially though. I use my own [build](https://github.com/nohajc/llvm-clang-static-libs-prebuilt/releases) to speed up AppVeyor jobs.
+
 ## How it works
 _TODO_
