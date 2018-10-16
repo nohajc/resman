@@ -16,7 +16,7 @@ This is a cross-platform solution for embedding resource files into executables.
 * Universal solution for all common platforms
 * No runtime dependencies
 
-#### Existing approaches to this problem include
+### Existing approaches to this problem
 * Using Windows resource management (only available for Windows PE files)
 * Converting your files into C/C++ byte arrays which can be compiled (this can produce very large source files)
 * Using utilities like objcopy (quite low-level, Linux-only AFAIK)
@@ -29,7 +29,7 @@ However, with the help of LLVM and Clang, we can do better.
 
 <sup><a name="footnote1">1</a></sup> Note that we're talking about embedding during linking phase. This tool is not able to modify existing executables.
 
-### What resman does differently
+## How to use
 
 This project consists of a resource compiler __rescomp__ and a header file __include/resman.h__.
 
@@ -79,10 +79,35 @@ unsigned id = handle.id();
 
 Make sure the linker can find __rescomp__'s output and your project should build now.
 
-#### So, to summarise
-Instead of generating byte arrays, you just write a header file with the list of resources.
+__So, to summarise:__ Instead of generating byte arrays, you just write a header file with the list of resources.
 Then you run the resource compiler to generate object files or static libraries directly from that list.
 That same list will also be be used to access your embedded resources.
 
-## More information
+### Configuration
+The __rescomp__ interface is quite simple. It just takes one or more header files and produces one object file or static library. All resources declared in these headers are packed into the output file.
+
+#### Required parameters
+<pre>
+&lt;input_file&gt; [&lt;input_file&gt; ...]       Input header file(s)
+-o &lt;output_file&gt;                      Output format is determined from the file extension you provide
+</pre>
+ 
+#### Optional parameters
+<pre>
+-I &lt;directory&gt; [-I &lt;directory&gt; ...]   Include search path
+-R &lt;directory&gt; [-R &lt;directory&gt; ...]   Resource search path
+</pre>
+ 
+Some directories are always added into search path implicitly:
+* Current working directory (resources and includes)
+* Program directory (includes only)
+
+The inclusion of program directory is just for convenience; i.e. if you have __resman.h__ saved next to __rescomp__, includes like ```<resman.h>``` or ```"resman.h"``` will be resolved without any additional ```-I``` parameters.
+
+### Build system integration
+For an example project that uses CMake, see the _examples_ directory.
+
+Generally, any build system which supports custom targets can be used.
+
+## How it works
 _TODO_
