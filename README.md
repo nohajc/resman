@@ -6,6 +6,15 @@ Cross-platform resource compiler and manager based on llvm/clang
 | ----- | ----- | ------- |
 | [![Linux build status](https://travis-matrix-badges.herokuapp.com/repos/nohajc/resman/branches/master/2)](https://travis-ci.org/nohajc/resman) | [![macOS build status](https://travis-matrix-badges.herokuapp.com/repos/nohajc/resman/branches/master/1)](https://travis-ci.org/nohajc/resman) | [![Windows build status](https://ci.appveyor.com/api/projects/status/github/nohajc/resman?branch=master&svg=true)](https://ci.appveyor.com/project/nohajc/resman) |
 
+## Table of Contents
+
+- [resman](#resman)
+  * [About](#about)
+  * [How to use](#how-to-use)
+  * [Installation](#installation)
+  * [Building from source](#building-from-source)
+  * [How it works](#how-it-works)
+
 ## About
 
 This is a cross-platform solution for embedding resource files into executables.<sup>[1](#footnote1)</sup>
@@ -120,7 +129,7 @@ I used Void Linux with musl libc which supports true static linking [unlike glib
 
 ## Building from source
 
-### Dependencies:
+### Dependencies
 * LLVM/Clang 6
 
 For __Linux__, there is a docker image prepared which has all the necessary dependencies installed. You can see how to invoke the build in _build_scripts/linux/travis_script.sh_.
